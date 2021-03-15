@@ -1,4 +1,3 @@
-
 Require Import Coq.Lists.List.
 Import ListNotations.
 Require Import Coq.Arith.PeanoNat.
