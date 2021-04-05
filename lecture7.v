@@ -1,5 +1,12 @@
 (* programming languages *)
 
+Require Import Coq.Arith.PeanoNat.
+Require Import Coq.Lists.List.
+Import ListNotations.
+
+Require Import Arith.
+Require Import Lia.
+
 Inductive arith: Set :=
   | const (n: nat)
   | plus (a b: arith)
@@ -32,3 +39,39 @@ Fixpoint depth (root: arith): nat :=
 Compute (depth (const 1)).
 Compute (depth (plus (const 1) (times (const 2) (const 4)))).
 Compute (depth (plus (const 1) (times (plus (const 2) (const 3)) (const 4)))).
+
+Lemma s_eq: forall (a b: nat),
+  a <= b <-> S a <= S b.
+
+Proof.
+  intros.
+  lia.
+Qed.
+
+Lemma max_0: forall a: nat,
+  (max 0 a) = a.
+
+Proof.
+  intros.
+  induction a; simpl; lia.
+Qed.
+
+Lemma max_leq: forall a b:nat,
+  (max a b) <= a + b.
+
+Proof.
+  intros.
+  destruct a as [|a'].
+  - rewrite -> max_0. lia.
+Admitted.
+
+
+Theorem depth_le_size: forall e,
+  depth e <= size e.
+
+Proof.
+  intros e.
+  induction e as [| e1 IHe1 | e2 IHe2]; simpl; try lia; rewrite <- s_eq.
+  - rewrite max_leq. lia.
+    simpl.
+    rewrite IHe1.
