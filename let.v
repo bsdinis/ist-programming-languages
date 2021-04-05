@@ -10,27 +10,28 @@ Require Import Lia.
 Notation var := string.
 Definition valuation := partial_map nat.
 
-Inductive arith: Type :=
+Inductive let_ast: Type :=
+  | Let (var : string) (val: let_ast) (next: let_ast)
   | Const (n: nat)
   | Var (x : string)
-  | Plus (a b: arith)
-  | Times (a b: arith).
+  | Plus (a b: let_ast)
+  | Times (a b: let_ast).
 
 
-Fixpoint size (root: arith) :  nat :=
+Fixpoint size (root: let_ast) :  nat :=
   match root with
   | Const _ | Var _ => 1
-  | (Plus a b)|(Times a b) => 1 + (size a) + (size b)
+  | Let _ a b |Plus a b|Times a b => 1 + (size a) + (size b)
   end.
 
 Compute (size (Const 1)).
 Compute (size (Plus (Const 1) (Times (Const 2) (Const 4)))).
 
 
-Fixpoint depth (root: arith): nat :=
+Fixpoint depth (root: let_ast): nat :=
   match root with
   | Const _ | Var _ => 1
-  | (Plus a b)|(Times a b) => 1 + (max (depth a) (depth b))
+  | Let _ a b |Plus a b|Times a b => 1 + (max (depth a) (depth b))
   end.
 
 Compute (depth (Const 1)).
@@ -42,11 +43,12 @@ Theorem depth_le_size: forall e,
 
 Proof.
   intros e.
-  induction e as [| | e1 IHe1 | e2 IHe2]; simpl; lia.
+  induction e; simpl; lia.
 Qed.
 
-Fixpoint commuter (root: arith): arith :=
+Fixpoint commuter (root: let_ast): let_ast :=
   match root with
+  | Let x v n => Let x (commuter v) (commuter n)
   | Plus a b => Plus (commuter b) (commuter a)
   | Times a b => Times (commuter b) (commuter a)
   | _ => root
@@ -58,23 +60,24 @@ Compute (commuter (Plus (Const 1) (Times (Plus (Const 2) (Const 3)) (Const 4))))
 
 Theorem size_commuter: forall e, size (commuter e) = size e.
 Proof.
-  induction e as [| | e1 IHe1 | e2 IHe2]; simpl; lia.
+  induction e; simpl; lia.
 Qed.
 
 Theorem depth_commuter: forall e, depth (commuter e) = depth e.
 Proof.
-  induction e as [| | e1 IHe1 | e2 IHe2]; simpl; lia.
+  induction e; simpl; lia.
 Qed.
 
 Theorem commuter_inverse: forall e, commuter (commuter e) = e.
 Proof.
-  induction e as [| | e1 IHe1 | e2 IHe2]; simpl; equality.
+  induction e; simpl; equality.
 Qed.
 
 
-Fixpoint substitute (orig: arith) (variable: var) (new_node: arith) : arith :=
+Fixpoint substitute (orig: let_ast) (variable: var) (new_node: let_ast) : let_ast :=
   match orig with
   | Const _ => orig
+  | Let x v n => Let x (substitute v variable new_node) (substitute n variable new_node)
   | Var x => if x =? variable then new_node else orig
   | Plus e1 e2 => Plus (substitute e1 variable new_node) (substitute e2 variable new_node)
   | Times e1 e2 => Times (substitute e1 variable new_node) (substitute e2 variable new_node)
@@ -85,15 +88,15 @@ Theorem substitute_depth : forall orig variable new_node,
       <= depth orig + depth new_node.
 Proof.
   intros.
-  induction orig as [| x | | ]; simpl; try lia.
-  destruct (x =? variable); simpl; try lia.
+  induction orig as [| | x | | ]; simpl; try lia.
+  destruct (x =? variable) eqn: Heq; simpl; try lia.
 Qed.
 
 
 Theorem substitute_self : forall orig variable,
   substitute orig variable (Var variable) = orig.
 Proof.
-  intros. induction orig as [| x | | ]; simpl; try equality.
+  intros. induction orig as [| | x | | ]; simpl; try equality.
   destruct (x =? variable) eqn: Heq; try equality.
   - rewrite eqb_eq in Heq; rewrite Heq; reflexivity.
 Qed.
@@ -103,13 +106,14 @@ Theorem substitute_commuter : forall orig variable new_node,
   commuter (substitute orig variable new_node)
 = substitute (commuter orig) variable (commuter new_node).
 Proof.
-  intros. induction orig as [| x | | ]; simpl; try equality.
+  intros. induction orig as [| | x | | ]; simpl; try equality.
   destruct (x =? variable) eqn: Heq; try equality.
 Qed.
 
 
-Fixpoint eval (e: arith) (v: valuation) : nat :=
+Fixpoint eval (e: let_ast) (v: valuation) : nat :=
   match e with
+  | Let var val next => eval next ( var |-> (eval val v); v)
   | Const n => n
   | Var x => match v x with
              | None => 0
@@ -119,20 +123,9 @@ Fixpoint eval (e: arith) (v: valuation) : nat :=
   | Times e1 e2 => eval e1 v * eval e2 v
   end.
 
-Fixpoint eval_o (e: arith) (v: valuation) : option nat :=
-  match e with
-  | Const n => Some n
-  | Var x => v x
-  | Plus e1 e2 => match (eval_o e1 v), (eval_o e2 v) with
-                  | None, _ => None
-                  | _, None => None
-                  | (Some n1), (Some n2) => Some (n1 + n1)
-                  end
-  | Times e1 e2 => match (eval_o e1 v), (eval_o e2 v) with
-                  | None, _ => None
-                  | _, None => None
-                  | Some n1, Some n2 => Some (n1 * n1)
-                   end
-  end.
+Definition let_prog1 := (Let "x" (Const 1) (Let "y" (Const 2) (Plus (Var "x") (Var "y"))) ).
+Compute eval let_prog1 (empty).
 
-
+Definition let_prog2 := (Let "x" (Const 1) (Let "y" (Const 2) (Plus (Var "x") (Times (Var "y") (Var "z"))))).
+Compute eval let_prog2 (empty).
+Compute eval let_prog2 ("z" |-> 10).

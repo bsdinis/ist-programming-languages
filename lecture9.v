@@ -119,5 +119,7 @@ Theorem constant_folding_ok : forall e v,
   interp (constant_folding e) v = interp e v.
 
 Proof.
-  induction e as [| | p1 IHp1 p2 IHp2 | m1 IHm1 m2 IHm2 | t1 IHt1 t2 IHt2 ]; simpl; try equality.
-Admitted.
+  induction e; simpl; try equality; intros;
+  destruct (constant_folding e1) eqn:Heq1; destruct (constant_folding e2) eqn:Heq2; rewrite <- IHe1; rewrite <- IHe2; equality.
+Qed.
+
