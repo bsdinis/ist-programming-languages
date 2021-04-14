@@ -3,7 +3,7 @@ From Coq Require Import Arith.Arith.
 From FirstProject Require Import Imp Maps.
 
 
-(* 3.1. TODO: Change/extend ceval_step as specified *)
+(* 3.1. DONE: Change/extend ceval_step as specified *)
 
 Notation "'LETOPT' x <== e1 'IN' e2"
    := (match e1 with
@@ -25,6 +25,10 @@ Fixpoint ceval_step (st : state) (c : com) (i : nat)
       | <{ c1 ; c2 }> =>
           LETOPT st' <== ceval_step st c1 i' IN
           ceval_step st' c2 i'
+      | <{ c1 !! c2 }> =>
+          if ((i mod 2) =? 0)
+            then ceval_step st c1 i'
+            else ceval_step st c2 i'
       | <{ if b then c1 else c2 end }> =>
           if (beval st b)
             then ceval_step st c1 i'
@@ -43,22 +47,11 @@ Definition test_ceval (st:state) (c:com) :=
   | Some st => Some (st X, st Y, st Z)
   end.
 
-(* Compute
-     (test_ceval empty_st
-         (X ::= 2;;
-          TEST (X <= 1)
-            THEN Y ::= 3
-            ELSE Z ::= 4
-          FI)).
-   ====>
-      Some (2, 0, 4)   *)
-
-
 (* ################################################################# *)
 (** * Relational vs. Step-Indexed Evaluation *)
 
-(* 3.2. TODO: Prove ceval_step__ceval, ceval_step_more, 
-	ceval__ceval_step, and ceval_and_ceval_step_coincide 
+(* 3.2. TODO: Prove ceval_step__ceval, ceval_step_more,
+	ceval__ceval_step, and ceval_and_ceval_step_coincide
 	(for the new implementation of the step-indexed evaluator) *)
 
 
@@ -73,6 +66,7 @@ Theorem ceval_step_more: forall i1 i2 st st' c,
   In (Some st') (ceval_step st c i1) ->
   In (Some st') (ceval_step st c i2).
 Proof.
+  intros.
 Admitted.
 
 (* ceval_step_more can be used in the proof of ceval__ceval_step *)

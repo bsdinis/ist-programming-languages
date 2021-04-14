@@ -26,7 +26,7 @@ The following properties have been proven.
 
 `ceval_step` has been extended to handle non-deterministic choice.
 
-The following properties have been proven.
+The following properties have been proven.  (TODO)
     - `ceval_step__ceval`
     - `ceval_step_more`
     - `ceval__ceval_step`
