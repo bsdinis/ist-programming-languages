@@ -1,8 +1,8 @@
 # Group Identification
 
- - FirstName LastName, IST number, Email
- - FirstName LastName, IST number, Email
- - FirstName LastName, IST number, Email
+ - Afonso Ribeiro, 86752, afonsoribeiro@tecnico.ulisboa.pt
+ - Baltasar Dinis, 89416, baltasar.dinis@tecnico.ulisboa.pt
+ - João Borges, 89482, joao.p.l.borges@tecnico.ulisboa.pt
 
 # Implemented Features
 TODO: Identify what you have done and, in particular, **identify any missing features**.
