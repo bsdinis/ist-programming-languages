@@ -1,6 +1,6 @@
 (** * Imp: Simple Imperative Programs *)
 
-(** Taken from the chapter Imp: 
+(** Taken from the chapter Imp:
   https://softwarefoundations.cis.upenn.edu/lf-current/Imp.html
 
     It might be a good idea to read the chapter before or as you
@@ -149,18 +149,19 @@ Proof. reflexivity. Qed.
 (** Here is the formal definition of the abstract syntax of
     commands: *)
 
-(* 1.1. TODO: Extend the datatype com with a new construct for non-deterministic choice. *)
+(* 1.1. DONE: Extend the datatype com with a new construct for non-deterministic choice. *)
 Inductive com : Type :=
   | CSkip
   | CAss (x : string) (a : aexp)
   | CSeq (c1 c2 : com)
+  | CNonDet (c1 c2 : com)
   | CIf (b : bexp) (c1 c2 : com)
   | CWhile (b : bexp) (c : com).
 
 (** As for expressions, we can use a few [Notation] declarations to
     make reading and writing Imp programs more convenient. *)
 
-(* 1.2. TODO: Define a new notation for the new construct. *)
+(* 1.2. DONE: Define a new notation for the new construct. *)
 Notation "'skip'"  :=
          CSkip (in custom com at level 0) : com_scope.
 Notation "x := y"  :=
@@ -169,6 +170,9 @@ Notation "x := y"  :=
              y at level 85, no associativity) : com_scope.
 Notation "x ; y" :=
          (CSeq x y)
+           (in custom com at level 90, right associativity) : com_scope.
+Notation "x !! y" :=
+         (CNonDet x y)
            (in custom com at level 90, right associativity) : com_scope.
 Notation "'if' x 'then' y 'else' z 'end'" :=
          (CIf x y z)
@@ -244,7 +248,7 @@ Reserved Notation
          (at level 40, c custom com at level 99,
           st constr, st' constr at next level).
 
-(* 1.3. TODO: Extend the relational semantics (ceval) to support non-deterministic choice. *)
+(* 1.3. DONE: Extend the relational semantics (ceval) to support non-deterministic choice. *)
 
 Inductive ceval : com -> state -> state -> Prop :=
   | E_Skip : forall st,
@@ -256,6 +260,9 @@ Inductive ceval : com -> state -> state -> Prop :=
       st  =[ c1 ]=> st'  ->
       st' =[ c2 ]=> st'' ->
       st  =[ c1 ; c2 ]=> st''
+  | E_NonDet : forall c1 c2 st st',
+      (st  =[ c1 ]=> st') \/ (st  =[ c2 ]=> st')  ->
+      st  =[ c1 !! c2 ]=> st'
   | E_IfTrue : forall st st' b c1 c2,
       beval st b = true ->
       st =[ c1 ]=> st' ->
@@ -299,8 +306,10 @@ Proof.
     apply E_Ass. reflexivity.
 Qed.
 
-(* 1.4. TODO: Use the new relational semantics to prove the examples 
+(* 1.4. DONE: Use the new relational semantics to prove the examples
 ceval_example_choice1, ceval_example_choice2, and ceval_example_choice3
+
+   @bsd: you guys should re-do these proofs
 *)
 
 Example ceval_example_choice1:
@@ -308,14 +317,28 @@ Example ceval_example_choice1:
     X := 0 ; (Y := 1 !! Z := 2)
   ]=> (Z !-> 2 ; X !-> 0).
 Proof.
-Admitted.
+  apply E_Seq with (X !-> 0).
+  - (* assignment *)
+    apply E_Ass. reflexivity.
+  - (* non deterministic *)
+    apply E_NonDet.
+    right.
+    apply E_Ass. reflexivity.
+Qed.
 
 Example ceval_example_choice2:
   empty_st =[
     X := 0 ; (Y := 1 !! Z := 2)
   ]=> (Y !-> 1 ; X !-> 0).
 Proof.
-Admitted.
+  apply E_Seq with (X !-> 0).
+  - (* assignment *)
+    apply E_Ass. reflexivity.
+  - (* non deterministic *)
+    apply E_NonDet.
+    left.
+    apply E_Ass. reflexivity.
+Qed.
 
 Example ceval_example_choice3:
   (X !-> 4) =[
@@ -324,11 +347,50 @@ Example ceval_example_choice3:
      end }>
   ]=> (X !-> 0).
 Proof.
+  apply E_WhileTrue with (X !-> 3; X !-> 4); simpl; try reflexivity.
+  - (* first iteration *)
+    apply E_NonDet.
+    left.
+    apply E_Ass. reflexivity.
+  - (* tail *)
+    apply E_WhileTrue with (X !-> 2; X !-> 3; X !-> 4); simpl; try reflexivity.
+    -- (* second iteration *)
+      apply E_NonDet.
+      left.
+      apply E_Ass. reflexivity.
+    -- apply E_WhileTrue with (X !-> 1; X !-> 2; X !-> 3; X !-> 4); simpl; try reflexivity.
+       --- (* third iteration *)
+        apply E_NonDet.
+        left.
+        apply E_Ass. reflexivity.
+       --- apply E_WhileTrue with (X !-> 0; X !-> 1; X !-> 2; X !-> 3; X !-> 4); simpl; try reflexivity.
+           ---- (* fourth iteration *)
+            apply E_NonDet.
+            left.
+            apply E_Ass. reflexivity.
+           ----
+                admit.
+
+ (* @bsd:
+    1. how to simplify the maps?
+    2. how to automate this
+  *)
 Admitted.
 
 
 (* ================================================================= *)
 (** ** Behavioral equivalence and algebraic properties *)
+
+Lemma choice_equiv: forall (c1 c2: com) st st',
+  st =[ c1 !! c2 ]=> st' <-> st =[ c1 ]=> st' \/ st =[ c2 ]=> st'.
+Proof.
+  intros.
+  split.
+  - (* -> *)
+    admit.
+  - (* <- *)
+    apply E_NonDet.
+Admitted.
 
 Definition cequiv (c1 c2 : com) : Prop := forall (st st' : state),
     (st =[ c1 ]=> st') <-> (st =[ c2 ]=> st').
@@ -337,19 +399,66 @@ Infix "==" := cequiv (at level 99).
 
 (* 2. TODO: Prove the following properties of non-deterministic choice *)
 
+(* When both branches are the same, the non-deterministic choice is deterministic
+   Probability parallel:
+        if both sides of a coin are the same,
+        flipping the coin is deterministic
+ *)
 Lemma choice_idempotent: forall c,
   <{ c !! c }> == <{ c }>.
 Proof.
-Admitted.
+ intros c.
+  split.
+  - (* -> *)
+    rewrite choice_equiv.
+    intros.
+    destruct H; assumption.
+  - (* <- *)
+    intros H.
+    apply E_NonDet.
+    left. (* or right *)
+    assumption.
+Qed.
 
+(* The order in which programs appear in the non-deterministic choice
+    is irrelevant.
+ *)
 Lemma choice_comm: forall c1 c2,
   <{ c1 !! c2 }> == <{ c2 !! c1 }>.
 Proof.
-Admitted.
+  intros c1 c2.
+  split.
+  - (* -> *)
+    intros H.
+    rewrite choice_equiv in H.
+    destruct H; apply E_NonDet.
+    -- right. assumption.
+    -- left. assumption.
+  - (* <- *)
+    intros H.
+    rewrite choice_equiv in H.
+    destruct H; apply E_NonDet.
+    -- right. assumption.
+    -- left. assumption.
+Qed.
 
 Lemma choice_assoc: forall c1 c2 c3,
   <{ (c1 !! c2) !! c3 }> == <{ c1 !! (c2 !! c3) }>.
 Proof.
+  intros c1 c2 c3.
+  split.
+  - (* -> *)
+    intros H.
+    rewrite choice_equiv in H.
+    destruct H; destruct H; apply E_NonDet; (left; assumption) || (right; assumption).
+    -- left. assumption.
+    -- left. assumption.
+  - (* <- *)
+    intros H.
+    rewrite choice_equiv in H.
+    destruct H; apply E_NonDet.
+    -- right. assumption.
+    -- left. assumption.
 Admitted.
 
 Lemma choice_seq_distr_l: forall c1 c2 c3,
@@ -363,7 +472,7 @@ Proof.
 Admitted.
 
 Lemma choice_congruence: forall c1 c1' c2 c2',
-  c1 == c1' -> c2 == c2' -> 
+  c1 == c1' -> c2 == c2' ->
   <{ c1 !! c2 }> == <{ c1' !! c2' }>.
 Proof.
 Admitted.
