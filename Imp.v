@@ -282,6 +282,10 @@ Inductive ceval : com -> state -> state -> Prop :=
 
   where "st =[ c ]=> st'" := (ceval c st st').
 
+(** Repeatedly simplify the before state using t_update_shadow
+ *)
+
+
 (** The cost of defining evaluation as a relation instead of a
     function is that we now need to construct _proofs_ that some
     program evaluates to some result state, rather than just letting
@@ -340,6 +344,7 @@ Proof.
     apply E_Ass. reflexivity.
 Qed.
 
+
 Example ceval_example_choice3:
   (X !-> 4) =[
     <{ while ~(X = 0) do
@@ -369,35 +374,22 @@ Proof.
             left.
             apply E_Ass. reflexivity.
            ----
-                admit.
-
- (* @bsd:
-    1. how to simplify the maps?
-    2. how to automate this
-  *)
-Admitted.
+                repeat rewrite t_update_shadow.
+                apply E_WhileFalse.
+                simpl.
+                reflexivity.
+Qed.
 
 
 (* ================================================================= *)
 (** ** Behavioral equivalence and algebraic properties *)
-
-Lemma choice_equiv: forall (c1 c2: com) st st',
-  st =[ c1 !! c2 ]=> st' <-> st =[ c1 ]=> st' \/ st =[ c2 ]=> st'.
-Proof.
-  intros.
-  split.
-  - (* -> *)
-    admit.
-  - (* <- *)
-    apply E_NonDet.
-Admitted.
 
 Definition cequiv (c1 c2 : com) : Prop := forall (st st' : state),
     (st =[ c1 ]=> st') <-> (st =[ c2 ]=> st').
 
 Infix "==" := cequiv (at level 99).
 
-(* 2. TODO: Prove the following properties of non-deterministic choice *)
+(* 2. DONE: Prove the following properties of non-deterministic choice *)
 
 (* When both branches are the same, the non-deterministic choice is deterministic
    Probability parallel:
@@ -410,9 +402,9 @@ Proof.
  intros c.
   split.
   - (* -> *)
-    rewrite choice_equiv.
-    intros.
-    destruct H; assumption.
+    intros H.
+    inversion H; subst.
+    destruct H4; assumption.
   - (* <- *)
     intros H.
     apply E_NonDet.
@@ -427,21 +419,19 @@ Lemma choice_comm: forall c1 c2,
   <{ c1 !! c2 }> == <{ c2 !! c1 }>.
 Proof.
   intros c1 c2.
-  split.
-  - (* -> *)
-    intros H.
-    rewrite choice_equiv in H.
-    destruct H; apply E_NonDet.
-    -- right. assumption.
-    -- left. assumption.
-  - (* <- *)
-    intros H.
-    rewrite choice_equiv in H.
-    destruct H; apply E_NonDet.
-    -- right. assumption.
-    -- left. assumption.
+  split;
+  intros H;
+  inversion H as [ | | | c1' c2' a_st a_st' H_dis H1 H2 H3 | | | | ];
+      subst;
+      destruct H_dis;
+      apply E_NonDet;
+      try (left; assumption); try (right; assumption).
 Qed.
 
+(* The choice is also associative.
+   This means that we can all choices from  N programs are the same,
+   no matter the grouping.
+ *)
 Lemma choice_assoc: forall c1 c2 c3,
   <{ (c1 !! c2) !! c3 }> == <{ c1 !! (c2 !! c3) }>.
 Proof.
@@ -449,30 +439,114 @@ Proof.
   split.
   - (* -> *)
     intros H.
-    rewrite choice_equiv in H.
-    destruct H; destruct H; apply E_NonDet; (left; assumption) || (right; assumption).
-    -- left. assumption.
-    -- left. assumption.
+    inversion H as [ | | | c1' c2' a_st a_st' H_dis H1 H2 H3 | | | | ];
+    subst.
+    destruct H_dis as [H12 | H3];  apply E_NonDet.
+    -- inversion H12 as [ | | | c1' c2' a_st a_st' H_dis' H1 H2 H3 | | | | ]. subst.
+       destruct H_dis' as [H1 | H2].
+       --- left; assumption.
+       --- right. apply E_NonDet. left. assumption.
+    -- right. apply E_NonDet. right. assumption.
   - (* <- *)
     intros H.
-    rewrite choice_equiv in H.
-    destruct H; apply E_NonDet.
-    -- right. assumption.
-    -- left. assumption.
-Admitted.
+    inversion H as [ | | | c1' c2' a_st a_st' H_dis H1 H2 H3 | | | | ];
+    subst.
+    destruct H_dis as [H1 | H23];  apply E_NonDet.
+    -- left. apply E_NonDet. left. assumption.
+    -- inversion H23 as [ | | | c1' c2' a_st a_st' H_dis' H1 H2 H3 | | | | ]. subst.
+       destruct H_dis' as [H2 | H3].
+       --- left. apply E_NonDet. right. assumption.
+       --- right. assumption.
+Qed.
 
+(* Non deterministic choice left distributes sequence
+   This means that we can ``factor out'' a left common sequence,
+   or distribute a left sequence inside the choice.
+*)
 Lemma choice_seq_distr_l: forall c1 c2 c3,
   <{ c1 ; (c2 !! c3)}> == <{ (c1;c2) !! (c1;c3) }>.
 Proof.
-Admitted.
+  intros.
+  split.
+  - (* -> *)
+    intros H.
+    inversion H as [ | | d1 d2 a_st a_st' a_st'' Hc1 Hc23  | | | | | ]; subst.
+    inversion Hc23 as [ | | |  e1 e2 b_st b_st' Hc23_dis |  | | | ]; subst.
+    apply E_NonDet.
+    destruct Hc23_dis as [Hc2 | Hc3].
+    -- left. apply E_Seq with a_st'; assumption.
+    -- right. apply E_Seq with a_st'; assumption.
+  - (* <- *)
+    intros H.
+    inversion H as [ | | | d1 d2 a_st a_st' Hdis  | | | | ]; subst.
+    destruct Hdis as [ Hc12 | Hc13 ].
+    -- inversion Hc12 as [ | | c1' c2' a_st a_st' a_st'' Hc1 Hc2 | | | | |]; subst.
+       apply E_Seq with a_st'.
+       assumption.
+       apply E_NonDet.
+       left.
+       assumption.
+    -- inversion Hc13 as [ | | c1' c2' a_st a_st' a_st'' Hc1 Hc3 | | | | |]; subst.
+       apply E_Seq with a_st'.
+       assumption.
+       apply E_NonDet.
+       right.
+       assumption.
+Qed.
 
+(* Non deterministic choice right distributes sequence
+   This means that we can ``factor out'' a right common sequence,
+   or distribute a right sequence inside the choice.
+*)
 Lemma choice_seq_distr_r: forall c1 c2 c3,
   <{ (c1 !! c2) ; c3 }> == <{ (c1;c3) !! (c2;c3) }>.
 Proof.
-Admitted.
+  intros.
+  split.
+  - (* -> *)
+    intros H.
+    inversion H as [ | | d1 d2 a_st a_st' a_st'' Hc12 Hc3  | | | | | ]; subst.
+    inversion Hc12 as [ | | |  e1 e2 b_st b_st' Hc12_dis |  | | | ]; subst.
+    apply E_NonDet.
+    destruct Hc12_dis as [Hc1 | Hc2].
+    -- left; apply E_Seq with a_st'; assumption.
+    -- right; apply E_Seq with a_st'; assumption.
+  - (* <- *)
+    intros H.
+    inversion H as [ | | | d1 d2 a_st a_st' Hdis  | | | | ]; subst.
+    destruct Hdis as [ Hc13 | Hc23 ].
+    -- inversion Hc13 as [ | | c1' c2' a_st a_st' a_st'' Hc1 Hc3 | | | | |]; subst.
+       apply E_Seq with a_st'.
+       apply E_NonDet.
+       left.
+       assumption.
+       assumption.
+    -- inversion Hc23 as [ | | c1' c2' a_st a_st' a_st'' Hc2 Hc3 | | | | |]; subst.
+       apply E_Seq with a_st'.
+       apply E_NonDet.
+       right.
+       assumption.
+       assumption.
+Qed.
 
+(* If two pairs are equal, their choice is also congruent
+ *)
 Lemma choice_congruence: forall c1 c1' c2 c2',
   c1 == c1' -> c2 == c2' ->
   <{ c1 !! c2 }> == <{ c1' !! c2' }>.
 Proof.
-Admitted.
+  intros c1 c1' c2 c2' H1 H2.
+  split.
+  - (* -> *)
+    intros H.
+    inversion H as [ | | | d1 d2 a_st a_st' H_dis H1' H2' H3' | | | | ]; subst.
+    destruct H_dis as [ Hc1 | Hc2 ]; apply E_NonDet.
+    -- left. apply H1 in Hc1. assumption.
+    -- right. apply H2 in Hc2. assumption.
+  - (* <- *)
+    intros H.
+    inversion H as [ | | | d1 d2 a_st a_st' H_dis H1' H2' H3' | | | | ]; subst.
+    destruct H_dis as [ Hc1' | Hc2' ]; apply E_NonDet.
+    -- left. apply H1 in Hc1'. assumption.
+    -- right. apply H2 in Hc2'. assumption.
+Qed.
