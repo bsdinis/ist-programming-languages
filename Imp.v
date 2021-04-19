@@ -282,10 +282,6 @@ Inductive ceval : com -> state -> state -> Prop :=
 
   where "st =[ c ]=> st'" := (ceval c st st').
 
-(** Repeatedly simplify the before state using t_update_shadow
- *)
-
-
 (** The cost of defining evaluation as a relation instead of a
     function is that we now need to construct _proofs_ that some
     program evaluates to some result state, rather than just letting
