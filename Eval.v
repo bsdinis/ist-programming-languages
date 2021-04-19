@@ -99,7 +99,9 @@ Proof.
   induction i as [| i' Hi' ].
   - (* i == 0 *)
     intros c st st' H. simpl in H. destruct H; try discriminate; try contradiction.
-  - (* i == S i' *)
+  - (* i == S i' *) (* This is exactly the proof : ceval_step_more *)
+    (*assert (i' <= (S i')). lia.*)
+    (*apply (@ceval_step_more i' (S i') _ _ _).*)
     intros c st st' H.
     destruct c; simpl in H.
     -- (* skip *)
@@ -108,7 +110,11 @@ Proof.
        rewrite H.
        apply E_Skip.
     -- (* := *)
-       destruct H. rewrite opt_eq in H. incersion 1.
+       destruct H. rewrite opt_eq in H.
+       + destruct H. apply E_Ass. reflexivity.
+       + contradiction.
+
+    -- (* ; *)
 
 
 Admitted.
@@ -118,7 +124,22 @@ Theorem ceval_step_more: forall i1 i2 st st' c,
   In (Some st') (ceval_step st c i1) ->
   In (Some st') (ceval_step st c i2).
 Proof.
-  intros.
+  induction i1 as [|i1']; intros i2 st st' c Hle Hceval.
+  - (* i1 = 0 *)
+    simpl in Hceval. destruct Hceval; try contradiction; try discriminate.
+  - (* i1 = S i1' *)
+    destruct i2 as [|i2']. inversion Hle.
+    assert (Hle': i1' <= i2') by lia.
+    destruct c; simpl in Hceval.
+    -- (* skip *)
+       inversion Hceval; try contradiction. simpl. assumption.
+    -- (* := *)
+       inversion Hceval. rewrite opt_eq in H.
+       + destruct H. admit.
+       + try contradiction.
+
+       -- (* ; *)
+       
 Admitted.
 
 (* ceval_step_more can be used in the proof of ceval__ceval_step *)
