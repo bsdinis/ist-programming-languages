@@ -132,14 +132,20 @@ Proof.
     assert (Hle': i1' <= i2') by lia.
     destruct c; simpl in Hceval.
     -- (* skip *)
-       inversion Hceval; try contradiction. simpl. assumption.
+       simpl. assumption.
     -- (* := *)
-       inversion Hceval. rewrite opt_eq in H.
-       + destruct H. admit.
-       + try contradiction.
+       simpl. assumption.
 
-       -- (* ; *)
-       
+    -- (* ; *)
+       admit.
+
+    -- (* !! *)
+        admit.
+
+    -- (* if *)
+       simpl. destruct (beval st b); apply IHi1'; assumption.
+    -- (* while *)
+       admit.
 Admitted.
 
 (* ceval_step_more can be used in the proof of ceval__ceval_step *)
