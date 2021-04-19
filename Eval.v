@@ -73,9 +73,8 @@ Fixpoint ceval_step (st : state) (c : com) (i : nat)
 Lemma opt_eq: forall T (a b: T), (Some a) = (Some b) <-> a = b.
 Proof.
   intros.
-  split.
-  -
-Admitted.
+  split; inversion 1; reflexivity.
+Qed.
 
 (**
    If there is a branch of computation (defined by the step-index evaluator)
@@ -108,8 +107,8 @@ Proof.
        rewrite opt_eq in H.
        rewrite H.
        apply E_Skip.
-    --
-
+    -- (* := *)
+       destruct H. rewrite opt_eq in H. incersion 1.
 
 
 Admitted.
