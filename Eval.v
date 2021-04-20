@@ -76,6 +76,12 @@ Proof.
   split; inversion 1; reflexivity.
 Qed.
 
+Theorem ceval_step_more': forall i1 i2 st st' c,
+  i1 <= i2 ->
+  In (Some st') (ceval_step st c i1) ->
+  In (Some st') (ceval_step st c i2).
+Proof. Admitted.
+
 (**
    If there is a branch of computation (defined by the step-index evaluator)
    that transforms st in st', there is a corresponding relational evaluation
@@ -99,9 +105,13 @@ Proof.
   induction i as [| i' Hi' ].
   - (* i == 0 *)
     intros c st st' H. simpl in H. destruct H; try discriminate; try contradiction.
+ (* - (* i == S i' *) (* This is exactly the proof : ceval_step_more *)
+    assert (i' <= (S i')) by lia.
+    intros c st st'.
+    assert (In (Some st') (ceval_step st c i') ->
+        In (Some st') (ceval_step st c (S i'))). apply ceval_step_more'. assumption. *)
+    (*apply (@ceval_step_more' i' (S i') _ _ _).*)
   - (* i == S i' *) (* This is exactly the proof : ceval_step_more *)
-    (*assert (i' <= (S i')). lia.*)
-    (*apply (@ceval_step_more i' (S i') _ _ _).*)
     intros c st st' H.
     destruct c; simpl in H.
     -- (* skip *)
@@ -130,15 +140,19 @@ Proof.
   - (* i1 = S i1' *)
     destruct i2 as [|i2']. inversion Hle.
     assert (Hle': i1' <= i2') by lia.
-    destruct c; simpl in Hceval.
+    destruct c.
     -- (* skip *)
-       simpl. assumption.
+       simpl in Hceval. simpl. assumption.
     -- (* := *)
-       simpl. assumption.
+       simpl in Hceval. simpl. assumption.
 
     -- (* ; *)
-       admit.
-
+       simpl in Hceval. simpl.
+       destruct (ceval_step st c1 i1') eqn:Heqst1'o.
+       --- inversion Hceval.
+       --- destruct (ceval_step st c1 i2').
+            + admit.
+            + admit.
     -- (* !! *)
         admit.
 
