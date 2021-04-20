@@ -4,7 +4,7 @@ From Coq Require Import Arith.Arith.
 From FirstProject Require Import Imp Maps.
 Import ListNotations.
 
-(* 3.1. TODO: Change/extend ceval_step as specified *)
+(* 3.1. DONE: Change/extend ceval_step as specified *)
 
 Notation "'LETOPT' st <== e1 'IN' e2"
    := (match e1 with
@@ -80,7 +80,8 @@ Theorem ceval_step_more': forall i1 i2 st st' c,
   i1 <= i2 ->
   In (Some st') (ceval_step st c i1) ->
   In (Some st') (ceval_step st c i2).
-Proof. Admitted.
+Proof.
+Admitted.
 
 (**
    If there is a branch of computation (defined by the step-index evaluator)
@@ -125,7 +126,16 @@ Proof.
        + contradiction.
 
     -- (* ; *)
+       admit.
 
+    -- (* !! *)
+       admit.
+
+    -- (* if *)
+       admit.
+
+    -- (* while *)
+       admit.
 
 Admitted.
 
@@ -157,7 +167,16 @@ Proof.
         admit.
 
     -- (* if *)
-       simpl. destruct (beval st b); apply IHi1'; assumption.
+       simpl.
+       destruct (beval st b) ; apply IHi1'; try assumption.
+            + (* c1 *)
+              simpl in Hceval.
+              (* In Hceval select the if clause *)
+              admit.
+            + (* c2 *)
+              simpl in Hceval.
+              (* In Hceval select the else clause *)
+              admit.
     -- (* while *)
        admit.
 Admitted.
