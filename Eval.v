@@ -192,4 +192,8 @@ Theorem ceval_and_ceval_step_coincide: forall c st st',
       st =[ c ]=> st'
   <-> exists i, In (Some st') (ceval_step st c i).
 Proof.
-Admitted.
+  intros.
+  split.
+  - apply ceval__ceval_step.
+  - apply ceval_step__ceval.
+Qed.
