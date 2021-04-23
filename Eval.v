@@ -126,16 +126,44 @@ Proof.
        + contradiction.
 
     -- (* ; *)
-       admit.
+        admit.
+       (* --- destruct (ceval_step st c1 i') eqn:Heqr1.
+           + contradiction.
+           + destruct flat_option_map.
+             ++ contradiction.
+             ++ apply Hi'. destruct (ceval_step st <{ c1; c2 }> i').
+       + apply Hi'.
+       + destruct flat_option_map.
+         ++ contradiction.
+         ++ destruct H.
+            +++ admit.
+            +++ admit. *)
 
     -- (* !! *)
-       admit.
+       apply in_app_or in H. apply E_NonDet. destruct H.
+       + (* left *) left. apply Hi'. assumption.
+       + (* right *) right. apply Hi'. assumption.
 
     -- (* if *)
-       admit.
+       destruct (beval st b) eqn:Heqr.
+       + (* r = true *)
+         apply E_IfTrue. rewrite Heqr. reflexivity.
+         apply Hi'. assumption.
+       + (* r = false *)
+         apply E_IfFalse. rewrite Heqr. reflexivity.
+         apply Hi'. assumption.
 
     -- (* while *)
-       admit.
+       destruct (beval st b) eqn :Heqr.
+       --- (* r = true *)
+           destruct (ceval_step st c i') eqn:Heqr1.
+           + (* [] *) contradiction.
+           + (* head::tail *) apply E_WhileTrue with st'; try assumption.
+              ++ destruct flat_option_map. contradiction. admit.
+              ++ admit.
+       --- (* r = false *)
+           destruct H. injection H as H2. rewrite <- H2.
+           apply E_WhileFalse. apply Heqr. contradiction.
 
 Admitted.
 
@@ -159,24 +187,19 @@ Proof.
     -- (* ; *)
        simpl in Hceval. simpl.
        destruct (ceval_step st c1 i1') eqn:Heqst1'o.
-       --- inversion Hceval.
+       --- contradiction.
        --- destruct (ceval_step st c1 i2').
             + admit.
             + admit.
     -- (* !! *)
-        admit.
+        simpl in Hceval. simpl. apply in_app_or in Hceval. apply in_app_iff.
+        destruct Hceval.
+        + left. apply IHi1'; assumption.
+        + right. apply IHi1'; assumption.
 
     -- (* if *)
-       simpl.
-       destruct (beval st b) ; apply IHi1'; try assumption.
-            + (* c1 *)
-              simpl in Hceval.
-              (* In Hceval select the if clause *)
-              admit.
-            + (* c2 *)
-              simpl in Hceval.
-              (* In Hceval select the else clause *)
-              admit.
+       simpl in Hceval. simpl.
+       destruct (beval st b) ; apply IHi1'; assumption.
     -- (* while *)
        admit.
 Admitted.
@@ -186,6 +209,31 @@ Theorem ceval__ceval_step: forall c st st',
       st =[ c ]=> st' ->
       exists i, In (Some st') (ceval_step st c i).
 Proof.
+    intros c st st' Hce.
+    induction Hce.
+    - (* skip *)
+      assert (In (Some st) (ceval_step st <{ skip }> 1)).
+      + simpl. left. reflexivity.
+      + eexists. apply H.
+    - (* := *)
+      assert (In (Some (x !-> n; st)) (ceval_step st <{ x := a }> 1)).
+      + simpl. left. apply opt_eq. rewrite H. reflexivity.
+      + eexists. apply H0.
+    - (* ; *)
+      destruct IHHce1 as [i1 H1]. destruct IHHce2 as [i2 H2].
+      admit.
+    - (* !! *)
+      destruct H.
+      + admit.
+      + admit.
+    - (* if true *)
+      admit.
+    - (* if false *)
+      admit.
+    - (* skip *)
+      admit.
+    - (* skip *)
+      admit.
 Admitted.
 
 Theorem ceval_and_ceval_step_coincide: forall c st st',
