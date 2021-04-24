@@ -154,16 +154,26 @@ Proof.
          apply Hi'. assumption.
 
     -- (* while *)
-       destruct (beval st b) eqn :Heqr.
-       --- (* r = true *)
-           destruct (ceval_step st c i') eqn:Heqr1.
-           + (* [] *) contradiction.
-           + (* head::tail *) apply E_WhileTrue with st'; try assumption.
-              ++ destruct flat_option_map. contradiction. admit.
-              ++ admit.
-       --- (* r = false *)
-           destruct H. injection H as H2. rewrite <- H2.
-           apply E_WhileFalse. apply Heqr. contradiction.
+      destruct (beval st b) eqn :Heqr.
+      --- (* r = true *)
+        destruct (ceval_step st c i') eqn:Heqr1.
+        + (* [] *) contradiction.
+        + (* head::tail *) apply E_WhileTrue with st'; try assumption.
+          ++
+            destruct flat_option_map.
+              +++ contradiction.
+              +++
+                admit.
+          ++
+            destruct flat_option_map.
+              +++ contradiction.
+              +++
+                apply Hi'.
+                admit.
+      --- (* r = false *)
+        destruct H.
+          + injection H as H2. rewrite <- H2. apply E_WhileFalse. apply Heqr.
+          + contradiction.
 
 Admitted.
 
@@ -224,15 +234,17 @@ Proof.
       admit.
     - (* !! *)
       destruct H.
-      + admit.
-      + admit.
+      + (* st =[ c1 ]=> st' *)
+        admit.
+      + (* st =[ c2 ]=> st' *)
+        admit.
     - (* if true *)
       admit.
     - (* if false *)
       admit.
-    - (* skip *)
+    - (* while false *)
       admit.
-    - (* skip *)
+    - (* while true *)
       admit.
 Admitted.
 
