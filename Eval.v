@@ -76,11 +76,30 @@ Proof.
   split; inversion 1; reflexivity.
 Qed.
 
-Theorem ceval_step_more': forall i1 i2 st st' c,
-  i1 <= i2 ->
-  In (Some st') (ceval_step st c i1) ->
-  In (Some st') (ceval_step st c i2).
+(* (ceval_step st_i c2 i) C (ceval_step st c1;c2 (S i)) *)
+
+Lemma single_map: forall c st i l1 l2 st_contained,
+  In st_contained (ceval_step st c i) ->
+  In st_contained (flat_option_map (fun st' => (ceval_step st' c i)) l1++(Some st)::l2).
 Proof.
+  intros.
+Admitted.
+
+Lemma middle_state_exists: forall c1 c2 st st' i,
+  In (Some st') (ceval_step st <{c1 ; c2}> (S i)) ->
+    (exists st_i, In (Some st_i) (ceval_step st c1 i) /\ In (Some st') (ceval_step st_i c2 i) ).
+Proof.
+  intros c1 c2 st st' i H.
+  simpl in H.
+  destruct (ceval_step st c1 i).
+  - contradiction.
+  -
+    destruct flat_option_map in H.
+    -- contradiction.
+    --
+    apply flat_option_map in H.
+    eexists.
+    split.
 Admitted.
 
 (**
