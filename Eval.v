@@ -78,6 +78,7 @@ Qed.
 
 (* (ceval_step st_i c2 i) C (ceval_step st c1;c2 (S i)) *)
 
+
 Lemma single_map: forall c st i l1 l2 st_contained,
   In st_contained (ceval_step st c i) ->
   In st_contained (flat_option_map (fun st' => (ceval_step st' c i)) l1++(Some st)::l2).
@@ -96,10 +97,12 @@ Proof.
   -
     destruct flat_option_map in H.
     -- contradiction.
-    --
-    apply flat_option_map in H.
-    eexists.
-    split.
+Admitted.
+
+Lemma middle_state_exists': forall c1 c2 st st',
+  st =[ c1; c2 ]=> st' ->
+  (exists st_i, st =[ c1 ]=> st_i /\ st_i =[ c2 ]=> st').
+Proof.
 Admitted.
 
 (**
@@ -125,13 +128,7 @@ Proof.
   induction i as [| i' Hi' ].
   - (* i == 0 *)
     intros c st st' H. simpl in H. destruct H; try discriminate; try contradiction.
- (* - (* i == S i' *) (* This is exactly the proof : ceval_step_more *)
-    assert (i' <= (S i')) by lia.
-    intros c st st'.
-    assert (In (Some st') (ceval_step st c i') ->
-        In (Some st') (ceval_step st c (S i'))). apply ceval_step_more'. assumption. *)
-    (*apply (@ceval_step_more' i' (S i') _ _ _).*)
-  - (* i == S i' *) (* This is exactly the proof : ceval_step_more *)
+  - (* i == S i' *)
     intros c st st' H.
     destruct c; simpl in H.
     -- (* skip *)
@@ -141,22 +138,23 @@ Proof.
        apply E_Skip.
     -- (* := *)
        destruct H. rewrite opt_eq in H.
-       + destruct H. apply E_Ass. reflexivity.
-       + contradiction.
+       --- destruct H. apply E_Ass. reflexivity.
+       --- contradiction.
 
     -- (* ; *)
-        admit.
-       (* --- destruct (ceval_step st c1 i') eqn:Heqr1.
+       apply E_Seq.
+       (*
+       --- destruct (ceval_step st c1 i') eqn:Heqr1.
            + contradiction.
            + destruct flat_option_map.
              ++ contradiction.
-             ++ apply Hi'. destruct (ceval_step st <{ c1; c2 }> i').
-       + apply Hi'.
-       + destruct flat_option_map.
-         ++ contradiction.
-         ++ destruct H.
-            +++ admit.
-            +++ admit. *)
+             ++ apply Hi'. apply (middle_state_exists  _ _ _  _ i').
+       --- apply Hi'.
+       --- destruct flat_option_map.
+         + contradiction.
+         + destruct H.
+            ++ admit.
+            ++ admit. *)
 
     -- (* !! *)
        apply in_app_or in H. apply E_NonDet. destruct H.
