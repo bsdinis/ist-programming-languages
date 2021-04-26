@@ -50,7 +50,13 @@ Fixpoint ceval_step (st : state) (c : com) (i : nat)
           [Some st]
       | <{ l := a1 }> =>
           [Some (l !-> aeval st a1 ; st)]
-      | <{ c1 ; c2 }> => (flat_option_map (fun st' => (ceval_step st' c2 i')) (ceval_step st c1 i'))
+      | <{ c1 ; c2 }> => (
+        flat_map (fun opt_st' => (match opt_st' with
+                                  | None => [None]
+                                  | Some st' => ceval_step st' c2 i'
+                                  end)
+        ) (ceval_step st c1 i')
+      )
       | <{ c1 !! c2 }> => (ceval_step st c1 i') ++ (ceval_step st c2 i')
       | <{ if b then c1 else c2 end }> =>
           if (beval st b)
@@ -58,7 +64,13 @@ Fixpoint ceval_step (st : state) (c : com) (i : nat)
             else ceval_step st c2 i'
       | <{ while b1 do c1 end }> =>
          if (beval st b1)
-          then (flat_option_map (fun st' => (ceval_step st' c i')) (ceval_step st c1 i'))
+          then (
+            flat_map (fun opt_st' => (match opt_st' with
+                                      | None => [None]
+                                      | Some st' => ceval_step st' c i'
+                                      end)
+            ) (ceval_step st c1 i')
+          )
           else [Some st]
     end
   end.
@@ -72,31 +84,25 @@ Fixpoint ceval_step (st : state) (c : com) (i : nat)
 
 (* (ceval_step st_i c2 i) C (ceval_step st c1;c2 (S i)) *)
 
-Lemma in_flat_map: forall c st i l1 l2 st_contained,
-  In st_contained (ceval_step st c i) ->
-  In st_contained (flat_option_map (fun st' => (ceval_step st' c i)) l1++(Some st)::l2).
-Proof.
-  intros.
-Admitted.
-
 Lemma middle_state_exists: forall c1 c2 st st' i,
   In (Some st') (ceval_step st <{c1 ; c2}> (S i)) ->
     (exists st_i, In (Some st_i) (ceval_step st c1 i) /\ In (Some st') (ceval_step st_i c2 i) ).
 Proof.
   intros c1 c2 st st' i H.
   simpl in H.
-  destruct (ceval_step st c1 i).
-  - contradiction.
-  -
-    destruct flat_option_map in H.
+  apply in_flat_map in H.
+  destruct H.
+  destruct H as [H_x_in].
+  destruct x.
+  - eexists.
+    split.
+    -- apply H_x_in.
+    -- apply H.
+  - simpl in H.
+    destruct H.
+    -- inversion H.
     -- contradiction.
-Admitted.
-
-Lemma middle_state_exists': forall c1 c2 st st',
-  st =[ c1; c2 ]=> st' ->
-  (exists st_i, st =[ c1 ]=> st_i /\ st_i =[ c2 ]=> st').
-Proof.
-Admitted.
+Qed.
 
 (**
    If there is a branch of computation (defined by the step-index evaluator)
@@ -123,7 +129,7 @@ Proof.
     intros c st st' H. simpl in H. destruct H; try discriminate; try contradiction.
   - (* i == S i' *)
     intros c st st' H.
-    destruct c; simpl in H.
+    destruct c.
     -- (* skip *)
        destruct H as [H_Some | H_False]; try contradiction; simpl.
        inversion H_Some as [H_state].
@@ -134,20 +140,12 @@ Proof.
        --- contradiction.
 
     -- (* ; *)
-       apply E_Seq.
-       (*
-       --- destruct (ceval_step st c1 i') eqn:Heqr1.
-           + contradiction.
-           + destruct flat_option_map.
-             ++ contradiction.
-             ++ apply Hi'. apply (middle_state_exists  _ _ _  _ i').
-       --- apply Hi'.
-       --- destruct flat_option_map.
-         + contradiction.
-         + destruct H.
-            ++ admit.
-            ++ admit. *)
-
+      apply middle_state_exists in H.
+      destruct H.
+      destruct H as [H1 H2].
+      apply Hi' in H1.
+      apply Hi' in H2.
+      apply E_Seq with x; assumption.
     -- (* !! *)
        apply in_app_or in H. apply E_NonDet. destruct H.
        + (* left *) left. apply Hi'. assumption.
@@ -157,29 +155,32 @@ Proof.
        destruct (beval st b) eqn:Heqr.
        + (* r = true *)
          apply E_IfTrue. rewrite Heqr. reflexivity.
+         unfold ceval_step in H.
+         rewrite Heqr in H.
          apply Hi'. assumption.
        + (* r = false *)
          apply E_IfFalse. rewrite Heqr. reflexivity.
+         unfold ceval_step in H.
+         rewrite Heqr in H.
          apply Hi'. assumption.
 
     -- (* while *)
       destruct (beval st b) eqn :Heqr.
       --- (* r = true *)
-        destruct (ceval_step st c i') eqn:Heqr1.
-        + (* [] *) contradiction.
-        + (* head::tail *) apply E_WhileTrue with st'; try assumption.
-          ++
-            destruct flat_option_map.
-              +++ contradiction.
-              +++
-                admit.
-          ++
-            destruct flat_option_map.
-              +++ contradiction.
-              +++
-                apply Hi'.
-                admit.
+        simpl in H.
+        rewrite Heqr in H.
+        apply in_flat_map in H.
+        destruct H as [mid_opt_state].
+        destruct H as [H_middle].
+        apply Hi'.
+        destruct (ceval_step st' c i') eqn:Heqr1.
+        + (* [] *) admit.
+        +
+          admit.
       --- (* r = false *)
+        simpl in H.
+        rewrite Heqr in H.
+        simpl in H.
         destruct H.
           + injection H as H2. rewrite <- H2. apply E_WhileFalse. apply Heqr.
           + contradiction.
@@ -202,20 +203,19 @@ Proof.
        simpl in Hceval. simpl. assumption.
     -- (* := *)
        simpl in Hceval. simpl. assumption.
-
     -- (* ; *)
-       simpl in Hceval. simpl.
-       destruct (ceval_step st c1 i1') eqn:Heqst1'o.
-       --- contradiction.
-       --- destruct (ceval_step st c1 i2').
-            + admit.
-            + admit.
+      admit.
+      (* simpl in Hceval. simpl. *)
+      (* destruct (ceval_step st c1 i1') eqn:Heqst1'o. *)
+      (* --- contradiction. *)
+      (* --- destruct (ceval_step st c1 i2'). *)
+      (*   + admit. *)
+      (*   + admit. *)
     -- (* !! *)
         simpl in Hceval. simpl. apply in_app_or in Hceval. apply in_app_iff.
         destruct Hceval.
         + left. apply IHi1'; assumption.
         + right. apply IHi1'; assumption.
-
     -- (* if *)
        simpl in Hceval. simpl.
        destruct (beval st b) ; apply IHi1'; assumption.
@@ -244,6 +244,8 @@ Proof.
     - (* !! *)
       destruct H.
       + (* st =[ c1 ]=> st' *)
+        unfold ceval_step.
+        simpl.
         admit.
       + (* st =[ c2 ]=> st' *)
         admit.
