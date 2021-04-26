@@ -13,32 +13,10 @@ Notation "'LETOPT' st <== e1 'IN' e2"
        end)
    (right associativity, at level 60).
 
-Fixpoint foreach_state
-  (states: list (option state))
-  (c2: com)
-  (i: nat)
-  (eval: state -> com -> nat -> list (option state))
-  : list (option state) :=
-  match states with
-  | [] => []
-  | (Some h)::tail => (eval h c2 i) ++ (foreach_state tail c2 i eval)
-  | None::tail => None::(foreach_state tail c2 i eval)
-  end.
-
 Check option_map.
 Compute (option_map S (Some(0))).
 Compute (option_map S None).
 Check map.
-
-Fixpoint flat_option_map {A B: Type} (f: A -> (list (option B))) (l1: list (option A)) :=
-  match l1 with
-  | [] => []
-  | h::t => match h with
-            | None => None::(flat_option_map f t)
-            | Some a => (f a) ++ (flat_option_map f t)
-            end
-  end.
-
 
 Fixpoint ceval_step (st : state) (c : com) (i : nat)
                     : list (option state) :=
@@ -303,12 +281,20 @@ Proof.
     - (* ; *)
       destruct IHHce1 as [i1 IHc1].
       destruct IHHce2 as [i2 IHc2].
-      assert ((ceval_step st' c2 i2) = (ceval_step st <{ c1; c2 }> (1 + i1 + i2))) as Heq.
-      -- simpl. apply (ceval_step_more (i1) (i1+i2) _ _ c1).
-      -- eexists. rewrite <- Heq. assumption.
+      remember (max i1 i2) as i_max.
+      apply (ceval_step_more i1 i_max _ _ _) in IHc1; try lia.
+      apply (ceval_step_more i2 i_max _ _ _) in IHc2; try lia.
+      eexists.
+      apply seq_middle_state_exists.
+      eexists.
+      split.
+      -- apply IHc1.
+      -- apply IHc2.
     - (* !! *)
-      apply E_NonDet in H.
-      admit.
+      destruct H as [H1 | H2].
+      -- admit.
+      -- admit.
+
     - (* if true *)
       destruct IHHce as [i IHc1].
       assert ((ceval_step st c1 i) = (ceval_step st <{ if b then c1 else c2 end }> (S i))).
@@ -324,7 +310,17 @@ Proof.
       -- simpl. rewrite H. reflexivity.
       -- eexists. rewrite <- Heq. simpl. left. reflexivity.
     - (* while true *)
-      admit.
+      destruct IHHce1 as [i1 IHc1].
+      destruct IHHce2 as [i2 IHc2].
+      remember (max i1 i2) as i_max.
+      apply (ceval_step_more i1 i_max _ _ _) in IHc1; try lia.
+      apply (ceval_step_more i2 i_max _ _ _) in IHc2; try lia.
+      eexists.
+      apply while_middle_state_exists; try assumption.
+      eexists.
+      split.
+      -- apply IHc1.
+      -- apply IHc2.
 Admitted.
 
 Theorem ceval_and_ceval_step_coincide: forall c st st',
