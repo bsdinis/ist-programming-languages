@@ -6,18 +6,6 @@ Import ListNotations.
 
 (* 3.1. DONE: Change/extend ceval_step as specified *)
 
-Notation "'LETOPT' st <== e1 'IN' e2"
-   := (match e1 with
-         | Some st => e2
-         | None => None
-       end)
-   (right associativity, at level 60).
-
-Check option_map.
-Compute (option_map S (Some(0))).
-Compute (option_map S None).
-Check map.
-
 Fixpoint ceval_step (st : state) (c : com) (i : nat)
                     : list (option state) :=
   match i with
@@ -56,12 +44,12 @@ Fixpoint ceval_step (st : state) (c : com) (i : nat)
 (* ################################################################# *)
 (** * Relational vs. Step-Indexed Evaluation *)
 
-(* 3.2. TODO: Prove ceval_step__ceval, ceval_step_more,
+(* 3.2. DONE: Prove ceval_step__ceval, ceval_step_more,
 	ceval__ceval_step, and ceval_and_ceval_step_coincide
 	(for the new implementation of the step-indexed evaluator) *)
 
-(* (ceval_step st_i c2 i) C (ceval_step st c1;c2 (S i)) *)
-
+(* This is useful to introduce the intermediate state in a sequence
+ *)
 Lemma seq_middle_state_exists: forall c1 c2 st st' i,
   In (Some st') (ceval_step st <{c1 ; c2}> (S i)) <->
     (exists st_i, In (Some st_i) (ceval_step st c1 i) /\ In (Some st') (ceval_step st_i c2 i) ).
@@ -93,6 +81,8 @@ Proof.
     -- apply H2.
 Qed.
 
+(* This is useful to introduce the intermediate state after a run of a  while loop
+ *)
 Lemma while_middle_state_exists: forall b c st st' i,
   beval st b = true ->
   (In (Some st') (ceval_step st <{ while b do c end}> (S i)) <->
@@ -131,6 +121,11 @@ Qed.
    If there is a branch of computation (defined by the step-index evaluator)
    that transforms st in st', there is a corresponding relational evaluation
    that transforms st in st'.
+
+   In other words, the step-index evaluator ''implies'' the relational evaluator
+   (meaning that all computations in the step-index evaluator have a matching relational evaluation)
+
+   This property, in conjunction with ceval__ceval_step, proves the equivalence of the evaluators.
  *)
 Theorem ceval_step__ceval: forall c st st',
       (exists i, In (Some st') (ceval_step st c i)) ->
@@ -170,10 +165,9 @@ Proof.
       apply Hi' in H2.
       apply E_Seq with x; assumption.
     -- (* !! *)
-       apply in_app_or in H. apply E_NonDet. destruct H.
-       --- (* left *) left. apply Hi'. assumption.
-       --- (* right *) right. apply Hi'. assumption.
-
+       apply in_app_or in H. destruct H.
+       --- apply E_NonDet1. apply Hi'. assumption.
+       --- apply E_NonDet2. apply Hi'. assumption.
     -- (* if *)
        destruct (beval st b) eqn:Heqr.
        --- (* r = true *)
@@ -205,6 +199,9 @@ Proof.
         ---- contradiction.
 Qed.
 
+(**
+   If we give more gas to a computation, it will produce _at least_ the same results.
+ *)
 Theorem ceval_step_more: forall i1 i2 st st' c,
   i1 <= i2 ->
   In (Some st') (ceval_step st c i1) ->
@@ -263,7 +260,15 @@ Proof.
            assumption.
 Qed.
 
-(* ceval_step_more can be used in the proof of ceval__ceval_step *)
+(**
+   If there is a relational evaluation of a program, there will be a matching
+   evaluation in the step-index evaluator, for some ammount of gas i.
+
+   In other words, the relational evaluator ''implies'' the step-index evaluator
+   (meaning that all computations in the relational evaluator have a matching step-index evaluation)
+
+   This property, in conjunction with ceval_step__ceval, proves the equivalence of the evaluators.
+ *)
 Theorem ceval__ceval_step: forall c st st',
       st =[ c ]=> st' ->
       exists i, In (Some st') (ceval_step st c i).
@@ -290,11 +295,16 @@ Proof.
       split.
       -- apply IHc1.
       -- apply IHc2.
-    - (* !! *)
-      destruct H as [H1 | H2].
-      -- admit.
-      -- admit.
-
+    - (* !! (1) *)
+      destruct IHHce as [i IH].
+      assert (In (Some st') (ceval_step st <{ c1 !! c2 }> (S i))) as H.
+      -- simpl. apply in_app_iff. left. assumption.
+      -- eexists. apply H.
+    - (* !! (2) *)
+      destruct IHHce as [i IH].
+      assert (In (Some st') (ceval_step st <{ c1 !! c2 }> (S i))) as H.
+      -- simpl. apply in_app_iff. right. assumption.
+      -- eexists. apply H.
     - (* if true *)
       destruct IHHce as [i IHc1].
       assert ((ceval_step st c1 i) = (ceval_step st <{ if b then c1 else c2 end }> (S i))).
@@ -321,8 +331,11 @@ Proof.
       split.
       -- apply IHc1.
       -- apply IHc2.
-Admitted.
+Qed.
 
+(**
+    This proves the equivalence between the evaluators, relying on ceval_step__ceval and ceval__ceval_step)
+ *)
 Theorem ceval_and_ceval_step_coincide: forall c st st',
       st =[ c ]=> st'
   <-> exists i, In (Some st') (ceval_step st c i).

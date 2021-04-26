@@ -260,9 +260,10 @@ Inductive ceval : com -> state -> state -> Prop :=
       st  =[ c1 ]=> st'  ->
       st' =[ c2 ]=> st'' ->
       st  =[ c1 ; c2 ]=> st''
-  | E_NonDet : forall c1 c2 st st',
-      (st  =[ c1 ]=> st') \/ (st  =[ c2 ]=> st')  ->
-      st  =[ c1 !! c2 ]=> st'
+  | E_NonDet1 : forall c1 c2 st st',
+      st  =[ c1 ]=> st' -> st  =[ c1 !! c2 ]=> st'
+  | E_NonDet2 : forall c1 c2 st st',
+      st  =[ c2 ]=> st' -> st  =[ c1 !! c2 ]=> st'
   | E_IfTrue : forall st st' b c1 c2,
       beval st b = true ->
       st =[ c1 ]=> st' ->
@@ -321,9 +322,7 @@ Proof.
   - (* assignment *)
     apply E_Ass. reflexivity.
   - (* non deterministic *)
-    apply E_NonDet.
-    right.
-    apply E_Ass. reflexivity.
+    apply E_NonDet2.  apply E_Ass. reflexivity.
 Qed.
 
 Example ceval_example_choice2:
@@ -335,9 +334,7 @@ Proof.
   - (* assignment *)
     apply E_Ass. reflexivity.
   - (* non deterministic *)
-    apply E_NonDet.
-    left.
-    apply E_Ass. reflexivity.
+    apply E_NonDet1. apply E_Ass. reflexivity.
 Qed.
 
 
@@ -350,24 +347,20 @@ Example ceval_example_choice3:
 Proof.
   apply E_WhileTrue with (X !-> 3; X !-> 4); simpl; try reflexivity.
   - (* first iteration *)
-    apply E_NonDet.
-    left.
+    apply E_NonDet1.
     apply E_Ass. reflexivity.
   - (* tail *)
     apply E_WhileTrue with (X !-> 2; X !-> 3; X !-> 4); simpl; try reflexivity.
     -- (* second iteration *)
-      apply E_NonDet.
-      left.
+      apply E_NonDet1.
       apply E_Ass. reflexivity.
     -- apply E_WhileTrue with (X !-> 1; X !-> 2; X !-> 3; X !-> 4); simpl; try reflexivity.
        --- (* third iteration *)
-        apply E_NonDet.
-        left.
+        apply E_NonDet1.
         apply E_Ass. reflexivity.
        --- apply E_WhileTrue with (X !-> 0; X !-> 1; X !-> 2; X !-> 3; X !-> 4); simpl; try reflexivity.
            ---- (* fourth iteration *)
-            apply E_NonDet.
-            left.
+            apply E_NonDet1.
             apply E_Ass. reflexivity.
            ----
                 repeat rewrite t_update_shadow.
@@ -399,12 +392,10 @@ Proof.
   split.
   - (* -> *)
     intros H.
-    inversion H; subst.
-    destruct H4; assumption.
+    inversion H; subst; assumption.
   - (* <- *)
     intros H.
-    apply E_NonDet.
-    left. (* or right *)
+    apply E_NonDet1.
     assumption.
 Qed.
 
@@ -417,11 +408,11 @@ Proof.
   intros c1 c2.
   split;
   intros H;
-  inversion H as [ | | | c1' c2' a_st a_st' H_dis H1 H2 H3 | | | | ];
-      subst;
-      destruct H_dis;
-      apply E_NonDet;
-      try (left; assumption); try (right; assumption).
+  inversion H as [ | | | a b c d H1 | a b c d H2 | | | | ]; subst.
+  - apply E_NonDet2. assumption.
+  - apply E_NonDet1. assumption.
+  - apply E_NonDet2. assumption.
+  - apply E_NonDet1. assumption.
 Qed.
 
 (* The choice is also associative.
@@ -435,24 +426,20 @@ Proof.
   split.
   - (* -> *)
     intros H.
-    inversion H as [ | | | c1' c2' a_st a_st' H_dis H1 H2 H3 | | | | ];
+    inversion H as [ | | | c1' c2' a_st a_st' H_dis H1 |  c1' c2' a_st a_st' H_dis | | | | ];
     subst.
-    destruct H_dis as [H12 | H3];  apply E_NonDet.
-    -- inversion H12 as [ | | | c1' c2' a_st a_st' H_dis' H1 H2 H3 | | | | ]. subst.
-       destruct H_dis' as [H1 | H2].
-       --- left; assumption.
-       --- right. apply E_NonDet. left. assumption.
-    -- right. apply E_NonDet. right. assumption.
+    -- inversion H_dis. subst.
+       --- apply E_NonDet1. assumption.
+       --- apply E_NonDet2. apply E_NonDet1. assumption.
+    -- apply E_NonDet2. apply E_NonDet2. assumption.
   - (* <- *)
     intros H.
-    inversion H as [ | | | c1' c2' a_st a_st' H_dis H1 H2 H3 | | | | ];
+    inversion H as [ | | | c1' c2' a_st a_st' H_dis H1 |  c1' c2' a_st a_st' H_dis | | | | ];
     subst.
-    destruct H_dis as [H1 | H23];  apply E_NonDet.
-    -- left. apply E_NonDet. left. assumption.
-    -- inversion H23 as [ | | | c1' c2' a_st a_st' H_dis' H1 H2 H3 | | | | ]. subst.
-       destruct H_dis' as [H2 | H3].
-       --- left. apply E_NonDet. right. assumption.
-       --- right. assumption.
+    -- apply E_NonDet1. apply E_NonDet1. assumption.
+    -- inversion H_dis. subst.
+       --- apply E_NonDet1. apply E_NonDet2. assumption.
+       --- apply E_NonDet2. assumption.
 Qed.
 
 (* Non deterministic choice left distributes sequence
@@ -466,28 +453,17 @@ Proof.
   split.
   - (* -> *)
     intros H.
-    inversion H as [ | | d1 d2 a_st a_st' a_st'' Hc1 Hc23  | | | | | ]; subst.
-    inversion Hc23 as [ | | |  e1 e2 b_st b_st' Hc23_dis |  | | | ]; subst.
-    apply E_NonDet.
-    destruct Hc23_dis as [Hc2 | Hc3].
-    -- left. apply E_Seq with a_st'; assumption.
-    -- right. apply E_Seq with a_st'; assumption.
+    inversion H as [ | | d1 d2 a_st a_st' a_st'' Hc1 Hc23  |  d1 d2 a_st a_st' a_st'' Hc1 Hc23 | | | | | ]; subst.
+    inversion Hc23 as [ | | |  e1 e2 b_st b_st' Hc2 |  e1 e2 b_st b_st' Hc3 |  | | | ]; subst.
+    -- apply E_NonDet1. apply E_Seq with a_st'; assumption.
+    -- apply E_NonDet2. apply E_Seq with a_st'; assumption.
   - (* <- *)
     intros H.
-    inversion H as [ | | | d1 d2 a_st a_st' Hdis  | | | | ]; subst.
-    destruct Hdis as [ Hc12 | Hc13 ].
-    -- inversion Hc12 as [ | | c1' c2' a_st a_st' a_st'' Hc1 Hc2 | | | | |]; subst.
-       apply E_Seq with a_st'.
-       assumption.
-       apply E_NonDet.
-       left.
-       assumption.
-    -- inversion Hc13 as [ | | c1' c2' a_st a_st' a_st'' Hc1 Hc3 | | | | |]; subst.
-       apply E_Seq with a_st'.
-       assumption.
-       apply E_NonDet.
-       right.
-       assumption.
+    inversion H as [ | | | d1 d2 a_st a_st' Hdis  | d1 d2 a_st a_st' Hdis  | | | | ]; subst.
+    -- inversion Hdis as [ | | a b c st'' e Hc1 Hc2  |  |  |  | | | ]; subst.
+       apply E_Seq with st''; try apply E_NonDet1; assumption.
+    -- inversion Hdis as [ | | a b c st'' e Hc1 Hc3  |  |  |  | | | ]; subst.
+       apply E_Seq with st''; try apply E_NonDet2; assumption.
 Qed.
 
 (* Non deterministic choice right distributes sequence
@@ -501,28 +477,17 @@ Proof.
   split.
   - (* -> *)
     intros H.
-    inversion H as [ | | d1 d2 a_st a_st' a_st'' Hc12 Hc3  | | | | | ]; subst.
-    inversion Hc12 as [ | | |  e1 e2 b_st b_st' Hc12_dis |  | | | ]; subst.
-    apply E_NonDet.
-    destruct Hc12_dis as [Hc1 | Hc2].
-    -- left; apply E_Seq with a_st'; assumption.
-    -- right; apply E_Seq with a_st'; assumption.
+    inversion H as [ | | d1 d2 a_st a_st' a_st'' Hc12 Hc3  | d1 d2 a_st a_st' a_st'' Hc12 Hc3  | | | | | ]; subst.
+    inversion Hc12 as [ | | |  e1 e2 b_st b_st' Hc1 | e1 e2 b_st b_st' Hc2 | |  | | ]; subst.
+    -- apply E_NonDet1. apply E_Seq with a_st'; assumption.
+    -- apply E_NonDet2. apply E_Seq with a_st'; assumption.
   - (* <- *)
     intros H.
-    inversion H as [ | | | d1 d2 a_st a_st' Hdis  | | | | ]; subst.
-    destruct Hdis as [ Hc13 | Hc23 ].
-    -- inversion Hc13 as [ | | c1' c2' a_st a_st' a_st'' Hc1 Hc3 | | | | |]; subst.
-       apply E_Seq with a_st'.
-       apply E_NonDet.
-       left.
-       assumption.
-       assumption.
-    -- inversion Hc23 as [ | | c1' c2' a_st a_st' a_st'' Hc2 Hc3 | | | | |]; subst.
-       apply E_Seq with a_st'.
-       apply E_NonDet.
-       right.
-       assumption.
-       assumption.
+    inversion H as [ | | | d1 d2 a_st a_st' Hdis | d1 d2 a_st a_st' Hdis  | | | | ]; subst.
+    -- inversion Hdis as [ | | a b c st'' e Hc1 Hc3  |  |  |  | | | ]; subst.
+       apply E_Seq with st''; try apply E_NonDet1; assumption.
+    -- inversion Hdis as [ | | a b c st'' e Hc2 Hc3  |  |  |  | | | ]; subst.
+       apply E_Seq with st''; try apply E_NonDet2; assumption.
 Qed.
 
 (* If two pairs are equal, their choice is also congruent
@@ -535,14 +500,12 @@ Proof.
   split.
   - (* -> *)
     intros H.
-    inversion H as [ | | | d1 d2 a_st a_st' H_dis H1' H2' H3' | | | | ]; subst.
-    destruct H_dis as [ Hc1 | Hc2 ]; apply E_NonDet.
-    -- left. apply H1 in Hc1. assumption.
-    -- right. apply H2 in Hc2. assumption.
+    inversion H as [ | | | d1 d2 a_st a_st' H1' | d1 d2 a_st a_st' H2' | | | | ]; subst.
+    -- apply E_NonDet1. apply H1 in H1'. assumption.
+    -- apply E_NonDet2. apply H2 in H2'. assumption.
   - (* <- *)
     intros H.
-    inversion H as [ | | | d1 d2 a_st a_st' H_dis H1' H2' H3' | | | | ]; subst.
-    destruct H_dis as [ Hc1' | Hc2' ]; apply E_NonDet.
-    -- left. apply H1 in Hc1'. assumption.
-    -- right. apply H2 in Hc2'. assumption.
+    inversion H as [ | | | d1 d2 a_st a_st' H1' | d1 d2 a_st a_st' H2' | | | | ]; subst.
+    -- apply E_NonDet1. apply H1 in H1'. assumption.
+    -- apply E_NonDet2. apply H2 in H2'. assumption.
 Qed.

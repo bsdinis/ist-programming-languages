@@ -26,12 +26,12 @@ The following properties have been proven.
 
 `ceval_step` has been extended to handle non-deterministic choice.
 
-The following properties have been proven.  (TODO)
+The following properties have been proven.
     - `ceval_step__ceval`
     - `ceval_step_more`
     - `ceval__ceval_step`
     - `ceval_and_ceval_step_coincide`
 
 # Extras
-TODO: Identify and describe additional work that you have done,
-      so that it can be considered for extra credits.
+
+TODO
