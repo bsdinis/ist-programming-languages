@@ -121,12 +121,20 @@ Theorem non_det_same_det: forall c,
   is_det c ->
   is_det <{ c !! c }>.
 Proof.
+    intros c H st st1 st2 H1 H2.
+    unfold is_det in H.
+    assert (st =[ c ]=> st1 -> st =[ c ]=> st2 -> st1 = st2). apply H.
+    apply H0; apply choice_idempotent; assumption.
 Admitted.
 
 Theorem same_det_non_det: forall c,
   is_det <{ c !! c }> ->
   is_det c.
 Proof.
+    intros c H st st1 st2 H1 H2.
+    unfold is_det in H.
+    assert (st =[ c !! c ]=> st1 -> st =[ c !! c ]=> st2 -> st1 = st2). apply H.
+    apply H0; apply choice_idempotent; assumption.
 Admitted.
 
 Theorem non_det_of_same_det: forall c,
