@@ -70,16 +70,9 @@ Fixpoint ceval_step (st : state) (c : com) (i : nat)
 	ceval__ceval_step, and ceval_and_ceval_step_coincide
 	(for the new implementation of the step-indexed evaluator) *)
 
-Lemma opt_eq: forall T (a b: T), (Some a) = (Some b) <-> a = b.
-Proof.
-  intros.
-  split; inversion 1; reflexivity.
-Qed.
-
 (* (ceval_step st_i c2 i) C (ceval_step st c1;c2 (S i)) *)
 
-
-Lemma single_map: forall c st i l1 l2 st_contained,
+Lemma in_flat_map: forall c st i l1 l2 st_contained,
   In st_contained (ceval_step st c i) ->
   In st_contained (flat_option_map (fun st' => (ceval_step st' c i)) l1++(Some st)::l2).
 Proof.
@@ -132,12 +125,11 @@ Proof.
     intros c st st' H.
     destruct c; simpl in H.
     -- (* skip *)
-       destruct H; try contradiction; simpl.
-       rewrite opt_eq in H.
-       rewrite H.
+       destruct H as [H_Some | H_False]; try contradiction; simpl.
+       inversion H_Some as [H_state].
        apply E_Skip.
     -- (* := *)
-       destruct H. rewrite opt_eq in H.
+       destruct H. inversion H as [H_aeval].
        --- destruct H. apply E_Ass. reflexivity.
        --- contradiction.
 
@@ -244,7 +236,7 @@ Proof.
       + eexists. apply H.
     - (* := *)
       assert (In (Some (x !-> n; st)) (ceval_step st <{ x := a }> 1)).
-      + simpl. left. apply opt_eq. rewrite H. reflexivity.
+      + simpl. left. rewrite H. reflexivity.
       + eexists. apply H0.
     - (* ; *)
       destruct IHHce1 as [i1 H1]. destruct IHHce2 as [i2 H2].
