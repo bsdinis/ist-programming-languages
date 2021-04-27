@@ -160,3 +160,32 @@ Proof.
     inversion H1_non; subst; inversion H2_non; subst;
     apply H1_det; try assumption; apply H_eqv; assumption.
 Qed.
+
+Theorem TODO_NAME_1: forall c1 c2,
+  is_det <{ c1 !! c2 }> ->
+  (is_det c1 /\ is_det c2).
+Proof.
+    intros c1 c2 H_det_all.
+    unfold is_det in *.
+    split; intros st st1 st2 H1 H2;
+    assert (st =[ c1 !! c2 ]=> st1 -> st =[ c1 !! c2 ]=> st2 -> st1 = st2) as H_det;
+    try apply H_det_all.
+    - apply H_det; apply E_NonDet1; assumption.
+    - apply H_det; apply E_NonDet2; assumption.
+Qed.
+
+Theorem TODO_NAME_2: forall c1 c2,
+  is_det <{ c1 !! c2 }> ->
+  are_equiv c1 c2.
+Proof.
+    intros c1 c2 H_det_all.
+    assert (is_det <{ c1 !! c2 }>) as H12_det_all. assumption.
+    apply TODO_NAME_1 in H12_det_all. destruct H12_det_all as [H1_det_all H2_det_all].
+    unfold is_det in *.
+    unfold are_equiv.
+    intros st st'.
+    split; intros H.
+    - apply H_det_all in H.
+    - admit.
+Qed.
+
