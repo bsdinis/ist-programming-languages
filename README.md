@@ -34,4 +34,11 @@ The following properties have been proven.
 
 # Extras
 
-TODO
+We proved several properties related to the conditional determinism of programs.
+Namely, we proved that:
+ 1. Programs without non-deterministic constructions are deterministic: `no_non_det`.
+ 2. Given a deterministic program c, c !! c is deterministic (and vice-versa): `non_det_of_same_det`.
+ 3. Given a deterministic program c1 !! c2, both c1 and c2 are deterministic: `deterministic_non_det_implies_det_clauses`.
+ 4. Given a deterministic program c1 !! c2, c1 and c2 are equivalent (and vice-versa): `det_non_det_forces_equivalence`.
+
+Note: we left one of the lemmas of `det_non_det_forces_equivalence` admitted (namely one of the directions of the proof).

@@ -8,12 +8,10 @@ Import ListNotations.
 (**
    We wish to prove several properties about the determinism of a program
    Summary:
-   - A program without non-deterministic constructions is deterministic. (no_non_det)
-   - A non_deterministic construct of the same deterministic program is deterministic. (non_det_same_det)
-    -- (the reverse is also true: same_det_non_det).
-   - A non_deterministic construct of *equivalent* deterministic program is deterministic. (non_det_equiv_det)
-
-
+     1. Programs without non-deterministic constructions are deterministic: `no_non_det`.
+     2. Given a deterministic program c, c !! c is deterministic (and vice-versa): `non_det_of_same_det`.
+     3. Given a deterministic program c1 !! c2, both c1 and c2 are deterministic: `deterministic_non_det_implies_det_clauses`.
+     4. Given a deterministic program c1 !! c2, c1 and c2 are equivalent (and vice-versa): `det_non_det_forces_equivalence`.
  *)
 
 (**
@@ -29,6 +27,11 @@ Definition is_det (c: com) : Prop :=
   st1 = st2.
 
 
+(**
+   We may also define an equivalence property on programs.
+   This property states that if two programs can transform the initial state st
+   into the same final state st', they are equivalent
+ *)
 Definition are_equiv (c1 c2: com) : Prop :=
   forall st st',
   st =[ c1 ]=> st' <-> st =[ c2 ]=> st'.
@@ -47,7 +50,14 @@ Fixpoint no_non_det_construct (c: com) : Prop :=
   | CWhile _ c => (no_non_det_construct c)
   end.
 
-(* We also prove several properties on this proposition *)
+(* We also prove several properties on this proposition:
+    `no_non_det_seq` allows us to destruct a sequence;
+    `no_non_det_if` allows us to destruct a if;
+    `no_non_det_while` allows us to destruct a while;
+
+   These make intiutive sense: if the overall expression does not have non-deterministic
+   constructs, its parts won't have them as well.
+    *)
 Lemma no_non_det_seq: forall c1 c2,
   no_non_det_construct <{ c1; c2 }> -> no_non_det_construct c1 /\ no_non_det_construct c2.
 Proof.
@@ -72,6 +82,8 @@ Proof.
 Qed.
 
 (**
+   This is the most trivial proof about determinism.
+   If a program does not have any non-deterministic constructs, then it is deterministic
   *)
 Theorem no_non_det: forall c,
   (no_non_det_construct c) ->
@@ -117,7 +129,13 @@ Proof.
     apply IHE1_2. assumption.
 Qed.
 
-Theorem non_det_same_det: forall c,
+(**
+   We extend our proof about non-determinism.
+   It is the case that if both branches of the
+   non-deterministic construct are the same _deterministic_ program
+   then the overall program is deterministic.
+  *)
+Lemma non_det_same_det: forall c,
   is_det c ->
   is_det <{ c !! c }>.
 Proof.
@@ -127,7 +145,12 @@ Proof.
     apply H0; apply choice_idempotent; assumption.
 Qed.
 
-Theorem same_det_non_det: forall c,
+(**
+   We can prove the other direction as well.
+   If a non-deterministic idempotent construct is deterministic,
+   it must be the case that the inner program is deterministic.
+ *)
+Lemma same_det_non_det: forall c,
   is_det <{ c !! c }> ->
   is_det c.
 Proof.
@@ -137,6 +160,9 @@ Proof.
     apply H0; apply choice_idempotent; assumption.
 Qed.
 
+(**
+   Stating equivalences is good for the soul.
+ *)
 Theorem non_det_of_same_det: forall c,
   is_det <{ c !! c }> <-> is_det c.
 Proof.
@@ -146,7 +172,33 @@ Proof.
   - apply non_det_same_det.
 Qed.
 
-Theorem non_det_equiv_det: forall c1 c2,
+(*
+   A weaker version of this same_det_non_det states that if
+   (for some reason) a non-deterministic construct is
+   deterministic, then its clauses must also be deterministic.
+ *)
+Theorem deterministic_non_det_implies_det_clauses: forall c1 c2,
+  is_det <{ c1 !! c2 }> ->
+  (is_det c1 /\ is_det c2).
+Proof.
+    intros c1 c2 H_det_all.
+    unfold is_det in *.
+    split; intros st st1 st2 H1 H2;
+    assert (st =[ c1 !! c2 ]=> st1 -> st =[ c1 !! c2 ]=> st2 -> st1 = st2) as H_det;
+    try apply H_det_all.
+    - apply H_det; apply E_NonDet1; assumption.
+    - apply H_det; apply E_NonDet2; assumption.
+Qed.
+
+(**
+   Here we can generalize the case where a non-deterministic construct
+   is deterministic.
+
+   For that to be true, both branches need to be deterministic (otherwise we would
+   contradict `deterministic_non_det_implies_det_clauses`) and both programs
+   must be equivalent, so no matter which branch is taken the effect is the same.
+ *)
+Lemma non_det_equiv_det: forall c1 c2,
   is_det c1 ->
   is_det c2 ->
   are_equiv c1 c2 ->
@@ -161,31 +213,38 @@ Proof.
     apply H1_det; try assumption; apply H_eqv; assumption.
 Qed.
 
-Theorem TODO_NAME_1: forall c1 c2,
-  is_det <{ c1 !! c2 }> ->
-  (is_det c1 /\ is_det c2).
-Proof.
-    intros c1 c2 H_det_all.
-    unfold is_det in *.
-    split; intros st st1 st2 H1 H2;
-    assert (st =[ c1 !! c2 ]=> st1 -> st =[ c1 !! c2 ]=> st2 -> st1 = st2) as H_det;
-    try apply H_det_all.
-    - apply H_det; apply E_NonDet1; assumption.
-    - apply H_det; apply E_NonDet2; assumption.
-Qed.
-
-Theorem TODO_NAME_2: forall c1 c2,
+(**
+   TODO: prove that if a non-deterministic construct is deterministic
+   then both programs must be equivalent.
+ *)
+Lemma equiv_det_non_det: forall c1 c2,
   is_det <{ c1 !! c2 }> ->
   are_equiv c1 c2.
 Proof.
     intros c1 c2 H_det_all.
     assert (is_det <{ c1 !! c2 }>) as H12_det_all. assumption.
-    apply TODO_NAME_1 in H12_det_all. destruct H12_det_all as [H1_det_all H2_det_all].
+    apply deterministic_non_det_implies_det_clauses in H12_det_all.
+    destruct H12_det_all as [H1_det_all H2_det_all].
     unfold is_det in *.
     unfold are_equiv.
     intros st st'.
     split; intros H.
-    - apply H_det_all in H.
-    - admit.
-Qed.
+    admit.
+Admitted.
 
+(**
+   Stating equivalences is good for the soul.
+ *)
+Theorem det_non_det_forces_equivalence: forall c1 c2,
+  is_det <{ c1 !! c2 }> <-> (are_equiv c1 c2 /\ is_det c1 /\ is_det c2).
+Proof.
+  intros c1 c2.
+  split.
+  - intros H.
+    split; try apply deterministic_non_det_implies_det_clauses; try assumption.
+    apply equiv_det_non_det. assumption.
+  - intros H.
+    destruct H as [Heq H].
+    destruct H as [H1 H2].
+    apply non_det_equiv_det; assumption.
+Qed.
