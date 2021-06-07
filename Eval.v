@@ -276,13 +276,11 @@ Proof.
     intros c st st' Hce.
     induction Hce.
     - (* skip *)
-      assert (In (Some st) (ceval_step st <{ skip }> 1)).
-      -- simpl. left. reflexivity.
-      -- eexists. apply H.
+      eexists 1.
+      simpl. left. reflexivity.
     - (* := *)
-      assert (In (Some (x !-> n; st)) (ceval_step st <{ x := a }> 1)) as Hin.
-      -- simpl. left. rewrite H. reflexivity.
-      -- eexists. apply Hin.
+      eexists 1.
+      simpl. left. rewrite H. reflexivity.
     - (* ; *)
       destruct IHHce1 as [i1 IHc1].
       destruct IHHce2 as [i2 IHc2].
