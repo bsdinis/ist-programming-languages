@@ -276,14 +276,22 @@ Proof with eauto.
     destruct T1; try solve_by_invert.
     case_equality T2 T3.
   - (* inl *)
-    admit.
+    rename t into TR, t0 into t.
+    fully_invert_typecheck Gamma t T1 T11 T12.
   - (* inr *)
-    admit.
+    rename t into TL, t0 into t.
+    fully_invert_typecheck Gamma t T1 T11 T12.
   - (* case *)
-    admit.
+    rename s into x1, s0 into x2.
+    rename t1 into t0, t2 into t1, t3 into t2.
+    fully_invert_typecheck Gamma t0 T0 T01 T02.
+    invert_typecheck (x1 |-> T01; Gamma) t1 T1.
+    invert_typecheck (x2 |-> T02; Gamma) t2 T2.
+    case_equality T1 T2.
   - (* nil *)
-    admit.
-  - (* h :: t *)
+    rename T into LT, t into T.
+    invert_typecheck Gamma <{ nil T }> T'.
+  - (* t1 :: t2 *)
     admit.
   - (* tlcase *)
     rename s into x31, s0 into x32.
@@ -293,19 +301,24 @@ Proof with eauto.
     invert_typecheck Gamma'2 t3 T3.
     case_equality T2 T3.
   - (* unit *)
-    admit.
+    fully_invert_typecheck Gamma <{ unit }> T T1 T2.
   - (* pair *)
-    admit.
+    invert_typecheck Gamma t1 T1.
+    invert_typecheck Gamma t2 T2.
   - (* fst *)
-    admit.
+    fully_invert_typecheck Gamma t TP T11 T12.
   - (* snd *)
-    admit.
+    fully_invert_typecheck Gamma t TP T11 T12.
   - (* let *)
-    admit.
+    invert_typecheck Gamma t1 T1.
+    invert_typecheck ( s |-> T1; Gamma) t2 T2.
   - (* fix *)
-    admit.
+    fully_invert_typecheck Gamma t TF T11 T12.
+    case_equality T11 T12.
   - (* non det *)
-    admit.
+    invert_typecheck Gamma t1 T1.
+    invert_typecheck Gamma t2 T2.
+    case_equality T1 T2.
 Admitted.
 
 Theorem type_checking_complete : forall Gamma t T,
