@@ -433,6 +433,27 @@ Fixpoint is_value (t: tm) : bool :=
   | _ => false
   end.
 
+Lemma is_value__value: forall t,
+  is_value t = true -> value t.
+Proof.
+  intro t.
+  intro H.
+  induction t; try solve_by_invert.
+  - apply v_abs.
+  - apply v_nat.
+  - apply v_inl. inversion H. auto.
+  - apply v_inr. inversion H. auto.
+  - apply v_lnil.
+  - apply v_lcons; inversion H; apply andb_true_iff in H1; destruct H1 as [H1 H2]; auto.
+  - apply v_unit.
+  - apply v_pair; inversion H; apply andb_true_iff in H1; destruct H1 as [H1 H2]; auto.
+Qed.
+
+Lemma value__is_value: forall t,
+  value t -> is_value t = true.
+Proof.
+Admitted.
+
 (* Operational semantics as a Coq function. *)
 Fixpoint stepf (t : tm) : list tm :=
   match t with
@@ -442,7 +463,7 @@ Fixpoint stepf (t : tm) : list tm :=
   | <{(\x:T2, t1) v2}> =>
       if is_value v2
         then [ <{ [x:=v2]t1 }> ]
-        else []
+        else map (fun t2' => <{(\x:T2, t1) t2'}>) (stepf v2)
   | <{t1 t2}> =>
       if is_value t1
         then ( if is_value t2
@@ -553,10 +574,36 @@ Fixpoint stepf (t : tm) : list tm :=
   | <{t1 !! t2}> => t1 :: [t2]
   end.
 
-(* Soundness of [stepf]. *)
 Theorem sound_stepf : forall t t',
   In t' (stepf t)  ->  t --> t'.
-Proof. (* TODO *) Admitted.
+Proof.
+  intros t t'.
+  intros Hstep.
+  induction t; try solve_by_invert.
+  - (* Application *)
+    simpl in Hstep.
+    destruct (is_value t1) eqn:Hval1.
+    + destruct (is_value t2) eqn:Hval2.
+      * (* t2 is already a value *)
+        apply is_value__value in Hval2.
+        destruct t1; try solve_by_invert.
+        apply in_inv in Hstep. destruct Hstep; try solve_by_invert.
+        rewrite <- H.
+        apply ST_AppAbs.
+        assumption.
+      * (* t1 is a value *)
+        apply is_value__value in Hval1.
+        destruct t1; try solve_by_invert.
+        apply in_map_iff in Hstep.
+        destruct Hstep as [t2' Hstep].
+        destruct Hstep as [H Hstep2].
+        ** rewrite <- H.
+           destruct stepf in Hstep2; try solve_by_invert.
+           apply in_inv in Hstep2. destruct Hstep2.
+           ***
+
+
+
 
 (* TODO *)
 (* Completeness of [stepf]. *)
