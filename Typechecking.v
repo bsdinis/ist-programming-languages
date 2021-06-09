@@ -457,7 +457,7 @@ Fixpoint stepf (t : tm) : list tm :=
       | tm_const n => [tm_const (S n)]
       | _ => map (fun t1' => <{succ t1'}>) (stepf t1)
       end
-  | <{ pred t1 }> => 
+  | <{ pred t1 }> =>
       match t1 with
       | tm_const n => [tm_const (n-1)]
       | _ => map (fun t1' => <{pred t1'}>) (stepf t1)
@@ -465,14 +465,35 @@ Fixpoint stepf (t : tm) : list tm :=
   | <{ t1 * t2 }> =>
       match t1, t2 with
       | tm_const n1, tm_const n2 => [tm_const (n1 * n2)]
-      | _, _ => [] (* TODO -> continue *)
+      | _, _ => if is_value t1
+          then ( if is_value t2
+              then []
+              else map (fun t2' => <{ t1 * t2' }> ) (stepf t2)
+
+          ) else map (fun t1' => <{ t1' * t2 }> ) (stepf t1)
       end
-  | <{if0 t1 then t2 else t3}> => [] (* TODO *)
+  | <{if0 t1 then t2 else t3}> =>
+      if is_value t1
+        then match t1 with
+            | tm_const 0 => [t2]
+            | tm_const _ => [t3]
+            | _ => []
+            end
+        else map (fun t1' => <{if0 t1' then t2 else t3}> ) (stepf t1)
 
   (* sums *)
   | <{inl T2 t1}> => map (fun x => <{inl T2 x}>) (stepf t1)
   | <{inr T1 t2}> => map (fun x => <{inr T1 x}>) (stepf t2)
-  | <{case t0 of | inl y1 => t1 | inr y2 => t2}> => []
+  | <{case t0 of | inl x1 => t1 | inr x2 => t2}> =>
+      match t0 with
+      | <{ inl T2 v0 }> => if is_value v0
+                        then [ <{ [x1:=v0]t1 }> ]
+                        else map (fun t0' => <{case t0' of | inl x1 => t1 | inr x2 => t2}> ) (stepf t0)
+      | <{ inr T1 v0 }> => if is_value v0
+                        then [ <{ [x2:=v0]t2 }> ]
+                        else map (fun t0' => <{case t0' of | inl x1 => t1 | inr x2 => t2}> ) (stepf t0)
+      | _ => map (fun t0' => <{case t0' of | inl x1 => t1 | inr x2 => t2}> ) (stepf t0)
+      end
 
   (* lists *)
   | <{nil _}> => []
@@ -482,7 +503,14 @@ Fixpoint stepf (t : tm) : list tm :=
             then []
             else map (fun t2' => <{t1 :: t2'}> ) (stepf t2)
         ) else map (fun t1' => <{t1' :: t2}> ) (stepf t1)
-  | <{case t1 of | nil => t2 | y1 :: y2 => t3}> => [] (* TODO *)
+  | <{case t1 of | nil => t2 | x1 :: x2 => t3}> =>
+      match t1 with
+      | <{ nil _ }> => [t2]
+      | <{ v1 :: vl }> => if andb (is_value v1) (is_value vl)
+                      then [ <{ [x2 := vl] ([x1 := v1] t3) }> ]
+                      else  map (fun t1' => <{case t1' of | nil => t2 | x1 :: x2 => t3}> ) (stepf t1)
+      | _ => map (fun t1' => <{case t1' of | nil => t2 | x1 :: x2 => t3}> ) (stepf t1)
+      end
 
   (* unit *)
   | <{unit}> => []
