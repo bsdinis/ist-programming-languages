@@ -352,7 +352,13 @@ Proof with eauto.
     rename T into LT, t into T.
     invert_typecheck Gamma <{ nil T }> T'.
   - (* t1 :: t2 *)
-    admit.
+    invert_typecheck Gamma t1 T1.
+    fully_invert_typecheck Gamma t2 T2 T21 T22.
+    rename T21 into T2.
+    destruct eqb_ty eqn:Heq; try solve_by_invert.
+    apply eqb_ty__eq in Heq.
+    subst.
+    invert_typecheck Gamma <{ t1 :: t2 }> T'.
   - (* tlcase *)
     rename s into x31, s0 into x32.
     fully_invert_typecheck Gamma t1 T1 T11 T12.
@@ -379,7 +385,7 @@ Proof with eauto.
     invert_typecheck Gamma t1 T1.
     invert_typecheck Gamma t2 T2.
     case_equality T1 T2.
-Admitted.
+Qed.
 
 Theorem type_checking_complete : forall Gamma t T,
   has_type Gamma t T ->
@@ -391,13 +397,14 @@ Proof.
     try (rewrite IHHty1);
     try (rewrite IHHty2);
     try (rewrite IHHty3);
+    try (rewrite (eqb_ty_refl T));
     try (rewrite (eqb_ty_refl T0));
     try (rewrite (eqb_ty_refl T1));
     try (rewrite (eqb_ty_refl T2));
     try (rewrite (eqb_ty_refl T3));
     eauto.
-    - destruct (Gamma x0); [assumption| solve_by_invert].
-Admitted.
+    - destruct (Gamma x); [assumption| solve_by_invert].
+Qed.
 End TypecheckerExtensions.
 
 
