@@ -41,7 +41,7 @@ Notation " 'fail' "
 
 
 (* ################################################################# *)
-(** **** Exercise: 5 stars, standard (typechecker_extensions) 
+(** **** Exercise: 5 stars, standard (typechecker_extensions)
 
     In this exercise we'll extend the typechecker to deal with the
     extended features discussed in chapter [MoreStlc].  Your job
@@ -69,6 +69,8 @@ Fixpoint eqb_ty (T1 T2 : ty) : bool :=
       andb (eqb_ty T11 T21) (eqb_ty T12 T22)
   | <{{List T11}}>, <{{List T21}}> =>
       eqb_ty T11 T21
+  | <{{T11 !! T12}}>, <{{T21 !! T22}}> =>
+      andb (eqb_ty T11 T21) (eqb_ty T12 T22)
   | _,_ =>
       false
   end.
@@ -89,7 +91,7 @@ Proof.
     try (rewrite andb_true_iff in H0; inversion H0 as [Hbeq1 Hbeq2];
          apply IHT1_1 in Hbeq1; apply IHT1_2 in Hbeq2; subst; auto);
     try (apply IHT1 in Hbeq; subst; auto).
- Qed.
+Qed.
 
 Fixpoint type_check (Gamma : context) (t : tm) : option ty :=
   match t with
@@ -141,7 +143,7 @@ Fixpoint type_check (Gamma : context) (t : tm) : option ty :=
 
   (* TODO *)
   (* Complete the following cases. *)
-  
+
   (* sums *)
   (* TODO *)
   (* lists (the [tlcase] is given for free) *)
@@ -258,14 +260,14 @@ Proof.
     eauto.
     - destruct (Gamma x0); [assumption| solve_by_invert].
       Admitted. (* ... and delete this line *)
-(* 
+(*
 Qed. (* ... and uncomment this one *)
 *)
 End TypecheckerExtensions.
 
 
 (* TODO *)
-(** **** Exercise: 5 stars, standard, optional (stlc_step_function) 
+(** **** Exercise: 5 stars, standard, optional (stlc_step_function)
 
     Above, we showed how to write a typechecking function and prove it
     sound and complete for the typing relation.  Do the same for the
@@ -301,7 +303,7 @@ Proof. (* TODO *) Admitted.
 End StepFunction.
 (** [] *)
 
-(** **** Exercise: 5 stars, standard, optional (stlc_impl) 
+(** **** Exercise: 5 stars, standard, optional (stlc_impl)
 
     Using the Imp parser described in the [ImpParser] chapter
     of _Logical Foundations_ as a guide, build a parser for extended

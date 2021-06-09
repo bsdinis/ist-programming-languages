@@ -198,6 +198,8 @@ Notation "'let' x '=' t1 'in' t2" :=
 
 Notation "'fix' t" := (tm_fix t) (in custom stlc at level 0).
 
+Notation "X '!!' Y" :=
+  (Ty_NonDet X Y) (in custom stlc_ty at level 5, X custom stlc_ty, Y custom stlc_ty at level 0).
 Notation "x '!!' y" := (tm_nondet x y) (in custom stlc at level 90, right associativity).
 
 (* ----------------------------------------------------------------- *)
@@ -1270,7 +1272,8 @@ Proof with eauto.
   - (* tm_let *)
     destruct (eqb_stringP x s); subst; eapply T_Let...
     + (* s=x *)
-      rewrite update_shadow in H6. assumption.
+      rewrite update_shadow in H6.
+      assumption.
     + (* s<>x *)
       apply IHt2.
       rewrite update_permute...
