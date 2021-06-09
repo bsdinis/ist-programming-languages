@@ -387,7 +387,6 @@ Inductive step : tm -> tm -> Prop :=
          -->  <{ [x2 := vl] ([x1 := v1] t3) }>
   (* pairs *)
   | ST_Pair1 : forall t1 t1' t2,
-
       t1 --> t1' ->
       <{ (t1, t2) }> --> <{ (t1', t2) }>
   | ST_Pair2 : forall v1 t2 t2',
