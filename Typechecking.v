@@ -227,13 +227,13 @@ Ltac invert_typecheck Gamma t T :=
   try solve_by_invert; try (inversion H0; eauto); try (subst; eauto).
 
 Ltac analyze T T1 T2 :=
-  destruct T as [T1 T2| |T1 T2|T1| |T1 T2]; try solve_by_invert.
+  destruct T as [T1 T2| |T1 T2| T1 | |T1 T2 | T1 T2]; try solve_by_invert.
 
 Ltac fully_invert_typecheck Gamma t T T1 T2 :=
   let TX := fresh T in
   remember (type_check Gamma t) as TO;
   destruct TO as [TX|]; try solve_by_invert;
-  destruct TX as [T1 T2| |T1 T2|T1| |T1 T2];
+  destruct TX as [T1 T2| |T1 T2|T1| |T1 T2 | T1 T2];
   try solve_by_invert; try (inversion H0; eauto); try (subst; eauto).
 
 Ltac case_equality S T :=
@@ -275,7 +275,16 @@ Proof with eauto.
     invert_typecheck Gamma t3 T3.
     destruct T1; try solve_by_invert.
     case_equality T2 T3.
-  (* TODO *)
+  - (* inl *)
+    admit.
+  - (* inr *)
+    admit.
+  - (* case *)
+    admit.
+  - (* nil *)
+    admit.
+  - (* h :: t *)
+    admit.
   - (* tlcase *)
     rename s into x31, s0 into x32.
     fully_invert_typecheck Gamma t1 T1 T11 T12.
@@ -283,8 +292,21 @@ Proof with eauto.
     remember (x31 |-> T11 ; x32 |-> <{{List T11}}> ; Gamma) as Gamma'2.
     invert_typecheck Gamma'2 t3 T3.
     case_equality T2 T3.
-  (* TODO *)
-Qed.
+  - (* unit *)
+    admit.
+  - (* pair *)
+    admit.
+  - (* fst *)
+    admit.
+  - (* snd *)
+    admit.
+  - (* let *)
+    admit.
+  - (* fix *)
+    admit.
+  - (* non det *)
+    admit.
+Admitted.
 
 Theorem type_checking_complete : forall Gamma t T,
   has_type Gamma t T ->
@@ -302,10 +324,7 @@ Proof.
     try (rewrite (eqb_ty_refl T3));
     eauto.
     - destruct (Gamma x0); [assumption| solve_by_invert].
-      Admitted. (* ... and delete this line *)
-(*
-Qed. (* ... and uncomment this one *)
-*)
+Admitted.
 End TypecheckerExtensions.
 
 
