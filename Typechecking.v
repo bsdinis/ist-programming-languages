@@ -141,35 +141,78 @@ Fixpoint type_check (Gamma : context) (t : tm) : option ty :=
       | _ => fail
       end
 
-  (* TODO *)
-  (* Complete the following cases. *)
-
   (* sums *)
-  (* TODO *)
-  (* lists (the [tlcase] is given for free) *)
-  (* TODO *)
-  | <{ case t0 of | nil => t1 | x21 :: x22 => t2 }> =>
-      match type_check Gamma t0 with
-      | Some <{{List T}}> =>
-          match type_check Gamma t1,
-                type_check (x21 |-> T ; x22 |-> <{{List T}}> ; Gamma) t2 with
-          | Some T1', Some T2' =>
-              if eqb_ty T1' T2' then Some T1' else None
-          | _,_ => None
-          end
-      | _ => None
+  | <{ inl TR t }> => (* TODO: add example *)
+      T <- type_check Gamma t ;;
+      return <{{ T + TR }}>
+  | <{ inr TL t }> => (* TODO: add example *)
+      T <- type_check Gamma t ;;
+      return <{{ TL + T }}>
+  | <{case t0 of | inl x1 => t1 | inr x2 => t2}> => (* TODO: add example *)
+      T0 <- type_check Gamma t0 ;;
+      match T0 with
+      | <{{ X1 + X2 }}> =>
+        T1 <- type_check (x1 |-> X1; Gamma) t1 ;;
+        T2 <- type_check (x2 |-> X2; Gamma) t2 ;;
+        if eqb_ty T1 T2 then return T1 else fail
+      | _ => fail
       end
+
+  (* lists (the [tlcase] is given for free) *)
+  | <{ nil T }> => return <{{ List T }}> (* TODO: add example *)
+  | <{ h :: t }> => (* TODO: add example *)
+    TH <- type_check Gamma h ;;
+    TT <- type_check Gamma t ;;
+    match TT with
+    | <{{ List T }}> => if eqb_ty T TH then return TT else fail
+    | _ => fail
+    end
+  | <{ case t0 of | nil => t1 | x21 :: x22 => t2 }> =>
+      T0 <- type_check Gamma t0 ;;
+      match T0 with
+      | <{{ List T }}> =>
+        T1 <- type_check Gamma t1 ;;
+        T2 <- type_check (x21 |-> T ; x22 |-> <{{List T}}> ; Gamma) t2 ;;
+        if eqb_ty T1 T2 then return T1 else fail
+      | _ => fail
+      end
+
   (* unit *)
-  (* TODO *)
+  | <{ unit }> => return <{{ Unit }}> (* TODO: add example *)
   (* pairs *)
-  (* TODO *)
+  | <{ (t1, t2) }> => (* TODO: add example *)
+      T1 <- type_check Gamma t1 ;;
+      T2 <- type_check Gamma t2 ;;
+      return <{{ T1 * T2 }}>
+  | <{ t.fst }> => (* TODO: add example *)
+      T <- type_check Gamma t ;;
+      match T with
+      | <{{ T1 * _ }}> => return T1
+      | _ => fail
+      end
+  | <{ t.snd }> => (* TODO: add example *)
+      T <- type_check Gamma t ;;
+      match T with
+      | <{{ _ * T2 }}> => return T2
+      | _ => fail
+      end
   (* let *)
-  (* TODO *)
+  | <{ let x = t1 in t2 }> => (* TODO: add example *)
+      T1 <- type_check Gamma t1 ;;
+      T2 <- type_check ( x |-> T1 ; Gamma) t2 ;;
+      return T2
   (* fix *)
-  (* TODO *)
+  | <{ fix t }> => (* TODO: add example *)
+      T <- type_check Gamma t ;;
+      match T with
+      | <{{ TT1 -> TT2 }}> => if eqb_ty TT1 TT2 then return TT1 else fail
+      | _ => fail
+      end
   (* non-deterministic choice *)
-  (* TODO *)
-  | _ => None  (* ... and delete this line when you complete the exercise. *)
+  | <{ t1 !! t2 }> => (* TODO: add example *)
+      T1 <- type_check Gamma t1 ;;
+      T2 <- type_check Gamma t2 ;;
+      if eqb_ty T1 T2 then return T1 else fail
   end.
 
 (* TODO: Provide an example for each of the new cases that you implemented.

@@ -387,6 +387,7 @@ Inductive step : tm -> tm -> Prop :=
          -->  <{ [x2 := vl] ([x1 := v1] t3) }>
   (* pairs *)
   | ST_Pair1 : forall t1 t1' t2,
+
       t1 --> t1' ->
       <{ (t1, t2) }> --> <{ (t1', t2) }>
   | ST_Pair2 : forall v1 t2 t2',
@@ -396,7 +397,7 @@ Inductive step : tm -> tm -> Prop :=
   | ST_Fst1: forall t t',
       t --> t' ->
       <{ t.fst }> --> <{ t'.fst }>
-  | ST_FstPar : forall v1 v2,
+  | ST_FstPair : forall v1 v2,
       value v1 ->
       value v2 ->
       <{ (v1, v2).fst }> --> v1
@@ -993,6 +994,46 @@ End Examples.
 
     Proof: By induction on the given typing derivation. *)
 
+Lemma destruct_pair: forall t Gamma T1 T2,
+    Gamma |- t \in (T1 * T2) -> exists t1 t2, t1 = <{ t.fst }> /\ t2 = <{ t.snd }>.
+Proof.
+    intros t Gamma T1 T2.
+    repeat eexists.
+Qed.
+
+Lemma construct_pair: forall t t1 t2,
+    t1 = <{ t.fst }> ->
+    t2 = <{ t.snd }> ->
+    t = <{ (t1, t2) }>.
+Proof.
+    intros t t1 t2.
+    intros Hfst Hsnd.
+    admit.
+Admitted.
+
+Lemma pair_value_propagates: forall t Gamma T1 T2,
+    Gamma |- t \in (T1 * T2) -> value t -> (value <{t.fst}> /\ value <{t.snd}>).
+Proof.
+    intros t Gamma T1 T2.
+    intros Hpair Hval.
+    inversion Hval; try contradiction.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - split.
+      + rewrite <- H1 in Hval.
+        apply destruct_pair in Hpair.
+        destruct Hpair as [t1 Hpair].
+        destruct Hpair as [t2 Hpair].
+        destruct Hpair as [Hfst Hsnd].
+        admit.
+      + admit.
+Admitted.
+
 Theorem progress : forall t T,
      empty |- t \in T ->
      value t \/ exists t', t --> t'.
@@ -1142,11 +1183,11 @@ Proof with eauto.
       eexists. apply ST_Pair1. apply H.
   - (* T_PairFst *)
     destruct IHHt as [ Hval | Hstep ]...
-    + left. admit.
+    + left. apply (pair_value_propagates t empty T1 T2); assumption.
     + right. destruct Hstep. eauto.
   - (* T_PairSnd *)
     destruct IHHt as [ Hval | Hstep ]...
-    + left. admit.
+    + left. apply (pair_value_propagates t empty T1 T2); assumption.
     + right. destruct Hstep. eauto.
   - (* T_Let *)
     destruct IHHt1...
