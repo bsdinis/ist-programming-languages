@@ -258,7 +258,7 @@ Fixpoint subst (x : string) (s : tm) (t : tm) : tm :=
     <{ ([x:=s] t) .snd }>
   (* let *)
   | <{let y = t1 in t2}> =>
-    <{ let y = [x:=s] t1 in [x:=s] t2 }> (* TODO is this correct? *)
+    <{ let y = [x:=s] t1 in [x:=s] t2 }> (* TODO we need to garantee x != y if == then change letter scheck slides *)
   (* fix *)
   | <{fix t}> => <{fix ([x:=s] t)}>
   (* non-deterministic choice *)
@@ -1057,11 +1057,32 @@ Proof with eauto.
       exists <{case t1' of | nil => t2 | x1 :: x2 => t3}>...
   - (* T_Unit *)
     left...
-
-  (* TODO *)	    
-  (* Complete the proof. *)
-Qed.    
-    
+  - (* T_Pair *)
+  destruct IHHt1 as [ | H_fst ]... destruct IHHt2 as [ | H_snd ]...
+    + (* t1: value, t2: ~value *)
+      right. destruct H_snd as [x H_step].
+      eexists. apply ST_Pair2. assumption. apply H_step.
+    + (* t1: ~value, t2: value *)
+      right. destruct H_fst.
+      eexists. apply ST_Pair1. apply H.
+  - (* T_PairFst *)
+    destruct IHHt as [ Hval | Hstep ]...
+    + left. admit.
+    + right. destruct Hstep. eauto.
+  - (* T_PairSnd *)
+    destruct IHHt as [ Hval | Hstep ]...
+    + left. admit.
+    + right. destruct Hstep. eauto.
+  - (* T_Let *)
+    destruct IHHt1...
+    + right. destruct H. eauto.
+  - (* T_Fix *)
+    destruct IHHt as [ Hval | Hstep ]...
+    + left. admit.
+    + right. destruct Hstep. eauto.
+  - (* T_NonDet *)
+    destruct IHHt1...
+Admitted.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_progress : option (nat*string) := None.
@@ -1173,10 +1194,17 @@ Proof with eauto.
         rewrite (update_permute _ _ _ _ _ _ n0) in H9.
         rewrite (update_permute _ _ _ _ _ _ n) in H9.
         assumption.
-
-  (* TODO *)
-  (* Complete the proof. *)
-Qed.
+  - (* tm_let *)
+    eapply T_Let...
+    destruct (eqb_stringP s x) in H6; subst.
+    + (* y=x *)
+      apply IHt2.
+      rewrite update_permute in H6.
+      assumption.
+      admit.
+    + (* y<>x *)
+      admit.
+Admitted.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_substitution_preserves_typing : option (nat*string) := None.
@@ -1219,9 +1247,16 @@ Proof with eauto.
       inversion HT1; subst.
       apply substitution_preserves_typing with <{{List T1}}>...
       apply substitution_preserves_typing with T1...
-
-  (* TODO *)
-  (* Complete the proof. *)
+  - (* TODO comment *)
+    inversion HT; subst...
+  - (* TODO comment *)
+    inversion HT; subst...
+  - (* TODO comment *)
+    inversion HE; subst...
+    eapply substitution_preserves_typing...
+  - (* TODO comment *)
+    inversion HT; subst.
+    eapply substitution_preserves_typing...
 Qed.
 
 (* Do not modify the following line: *)
