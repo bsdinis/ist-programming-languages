@@ -422,8 +422,100 @@ Module StepFunction.
 Import MoreStlc.
 Import STLCExtended.
 
-Definition state := total_map tm.
+Fixpoint is_value (t: tm) : bool :=
+  false.
+
 (* Operational semantics as a Coq function. *)
+Fixpoint stepf (t : tm) : list tm :=
+  match t with
+  (* pure STLC *)
+  (* If, at the point when this is being evaluated, it hasn't yet been substituted,
+     then this variable is unassigned, and we error out (with the empty list *)
+  | tm_var y => []
+  | <{\y:T, t1}> => [t]
+  | <{t1 t2}> => [] (* TODO *)
+
+  (* numbers *)
+  | tm_const _ => [t]
+  | <{ succ t1 }> => [] (* TODO *)
+
+
+  | <{ pred t1 }> => [] (* TODO *)
+
+  | <{ t1 * t2 }> => [] (* TODO *)
+  | <{if0 t1 then t2 else t3}> => [] (* TODO *)
+  (* sums *)
+  | <{inl T2 t1}> => map (fun x => <{inl T2 x}>) (stepf t1)
+  | <{inr T1 t2}> => map (fun x => <{inr T1 x}>) (stepf t2)
+  | <{case t0 of | inl y1 => t1 | inr y2 => t2}> => []
+
+  (* lists *)
+  | <{nil _}> => [t]
+  | <{t1 :: t2}> => [] (* TODO *)
+  | <{case t1 of | nil => t2 | y1 :: y2 => t3}> => [] (* TODO *)
+
+  (* unit *)
+  | <{unit}> => [t]
+
+  (* pairs *)
+  | <{(t1 , t2)}> =>  [] (* TODO *)
+  | <{t.fst}> => [] (* TODO *)
+  | <{t.snd}> => [] (* TODO *)
+
+  (* let *)
+  | <{let y = t1 in t2}> => [] (* TODO *)
+
+  (* fix *)
+  | <{ fix t' }> => [t']
+
+  (* non-deterministic choice *)
+  | <{t1 !! t2}> => if value t1 = True then
+                        if value t2 = True then [t1; t2] else map (fun x2 => <{ t1 !! x2 }>) (stepf t2)
+                        else map (fun x1 => <{ x1 !! t2 }>) (stepf t1)
+  end.
+
+(* Soundness of [stepf]. *)
+Theorem sound_stepf : forall t t',
+  In t' (stepf t)  ->  t --> t'.
+Proof. (* TODO *) Admitted.
+
+(* TODO *)
+(* Completeness of [stepf]. *)
+Theorem complete_stepf : forall t t',
+    t --> t'  ->  In t' (stepf t).
+Proof. (* TODO *) Admitted.
+
+Fixpoint big_stepf (t : tm) : list tm :=
+  match t with
+  (* pure STLC *)
+  (* If, at the point when this is being evaluated, it hasn't yet been substituted,
+     then this variable is unassigned, and we error out (with the empty list *)
+  | tm_var y => []
+  | <{\y:T, t1}> => [t]
+  | <{t1 t2}> => fold_right (fun x1 acc1 => match x1 with
+                                            | <{\y:T, tt1}> => (fold_right
+                                                    (fun x2 acc2 => stepf <{[y:=x2]tt1}> ++ acc2)
+                                                    (stepf t2) [])
+                                                    ++ acc1
+                                            | _ => acc1
+                                            end) (stepf t1) []
+
+  (* numbers *)
+  | tm_const _ => [t]
+  | <{ succ t1 }> =>
+    fold_right (fun x acc => match x with
+                                 | tm_const v =>  tm_const (v + 1) :: acc
+                                 | _ => acc
+                                end ) (stepf t1) []
+
+
+  | <{ pred t1 }> =>
+    fold_right (fun x acc => match x with
+                                 | tm_const v =>  tm_const (v - 1) :: acc
+                                 | _ => acc
+                                end ) (stepf t1) []
+
+  | <{ t1 * t2 }> =>
 Fixpoint stepf (t : tm) : list tm :=
   match t with
   (* pure STLC *)
@@ -519,18 +611,165 @@ Fixpoint stepf (t : tm) : list tm :=
   (* non-deterministic choice *)
   | <{t1 !! t2}> => (stepf t1) ++ (stepf t2)
   end.
+    fold_right (fun x1 acc1 => match x1 with
+                               | tm_const v1 =>
+                                   (fold_right (fun x2 acc2 => match x2 with
+                                                               | tm_const v2 =>  tm_const (v1 * v2) :: acc2
+                                                               | _ => acc2
+                                                               end)
+                                                               (stepf t2) []) ++ acc1
+                               | _ => acc1
+                               end ) (stepf t1) []
+  | <{if0 t1 then t2 else t3}> => fold_right (fun x acc => match x with
+                                                           | tm_const 0 => (stepf t2) ++ acc
+                                                           | tm_const _ => (stepf t3) ++ acc
+                                                           | _ => acc
+                                                           end) (stepf t1) []
 
-(* Soundness of [stepf]. *)
-Theorem sound_stepf : forall t t',
-    In t' (stepf t)  ->  t --> t'.
-Proof. (* TODO *) Admitted.
+Fixpoint stepf (t : tm) : list tm :=
+  match t with
+  (* pure STLC *)
+  (* If, at the point when this is being evaluated, it hasn't yet been substituted,
+     then this variable is unassigned, and we error out (with the empty list *)
+  | tm_var y => []
+  | <{\y:T, t1}> => [t]
+  | <{t1 t2}> => fold_right (fun x1 acc1 => match x1 with
+                                            | <{\y:T, tt1}> => (fold_right
+                                                    (fun x2 acc2 => stepf <{[y:=x2]tt1}> ++ acc2)
+                                                    (stepf t2) [])
+                                                    ++ acc1
+                                            | _ => acc1
+                                            end) (stepf t1) []
 
-(* TODO *)
-(* Completeness of [stepf]. *)
-Theorem complete_stepf : forall t t',
-    t --> t'  ->  In t' (stepf t).
-Proof. (* TODO *) Admitted.
+  (* numbers *)
+  | tm_const _ => [t]
+  | <{ succ t1 }> =>
+    fold_right (fun x acc => match x with
+                                 | tm_const v =>  tm_const (v + 1) :: acc
+                                 | _ => acc
+                                end ) (stepf t1) []
 
+
+  | <{ pred t1 }> =>
+    fold_right (fun x acc => match x with
+                                 | tm_const v =>  tm_const (v - 1) :: acc
+                                 | _ => acc
+                                end ) (stepf t1) []
+
+  | <{ t1 * t2 }> =>
+    fold_right (fun x1 acc1 => match x1 with
+                               | tm_const v1 =>
+                                   (fold_right (fun x2 acc2 => match x2 with
+                                                               | tm_const v2 =>  tm_const (v1 * v2) :: acc2
+                                                               | _ => acc2
+                                                               end)
+                                                               (stepf t2) []) ++ acc1
+                               | _ => acc1
+                               end ) (stepf t1) []
+  | <{if0 t1 then t2 else t3}> => fold_right (fun x acc => match x with
+                                                           | tm_const 0 => (stepf t2) ++ acc
+                                                           | tm_const _ => (stepf t3) ++ acc
+                                                           | _ => acc
+                                                           end) (stepf t1) []
+
+  (* sums *)
+  | <{inl T2 t1}> => map (fun x => <{inl T2 x}>) (stepf t1)
+  | <{inr T1 t2}> => map (fun x => <{inr T1 x}>) (stepf t2)
+  | <{case t0 of | inl y1 => t1 | inr y2 => t2}> => fold_right (fun t acc =>
+        match t with
+        | <{ inl T2 tt1 }> => (stepf <{[y1:=tt1]t1}>) ++ acc
+        | <{ inr T1 tt2 }> => (stepf <{[y2:=tt2]t2}>) ++ acc
+        | _ => acc
+        end) (stepf t0) []
+
+  (* lists *)
+  | <{nil _}> => [t]
+  | <{t1 :: t2}> => fold_right
+                    (fun x2 acc2 => match x2 with
+                                    | <{ nil T }> => fold_right (fun x1 acc1 => <{ x1 :: x2 }> :: acc2 ) (stepf t1) []
+                                    | <{ h::tail }> => fold_right (fun x1 acc1 => <{ x1 :: x2 }> :: acc2 ) (stepf t1) []
+                                    | _ => acc2
+                                    end)
+                    (stepf t2) []
+  | <{case t1 of | nil => t2 | y1 :: y2 => t3}> => fold_right (fun t acc =>
+        match t with
+        | <{ nil _ }> => (stepf t2) ++ acc
+        | <{ tt1 :: tt2 }> => (stepf <{[y1:=tt1]([y2:=tt2]t2)}>) ++ acc
+        | _ => acc
+        end) (stepf t1) []
+
+  (* unit *)
+  | <{unit}> => [t]
+
+  (* pairs *)
+  | <{(t1 , t2)}> => fold_right (fun x1 acc1 => (map (fun x2 => <{(x1, x2)}>) (stepf t2)) ++ acc1) (stepf t1) []
+  | <{t.fst}> => fold_right (fun x acc => match x with
+                                          | <{ (v1, _) }> => v1::acc
+                                          | _ => acc
+                                          end) (stepf t) []
+  | <{t.snd}> => fold_right (fun x acc => match x with
+                                            | <{ (_, v2) }> => v2::acc
+                                            | _ => acc
+                                            end) (stepf t) []
+
+  (* let *)
+  | <{let y = t1 in t2}> => fold_right (fun x1 acc1 => (stepf <{[y:=x1]t2}>) ++ acc1) (stepf t1) []
+
+  (* fix *)
+  | <{ fix t' }> => [t']
+
+  (* non-deterministic choice *)
+  | <{t1 !! t2}> => (stepf t1) ++ (stepf t2)
+  end.
+  (* sums *)
+  | <{inl T2 t1}> => map (fun x => <{inl T2 x}>) (stepf t1)
+  | <{inr T1 t2}> => map (fun x => <{inr T1 x}>) (stepf t2)
+  | <{case t0 of | inl y1 => t1 | inr y2 => t2}> => fold_right (fun t acc =>
+        match t with
+        | <{ inl T2 tt1 }> => (stepf <{[y1:=tt1]t1}>) ++ acc
+        | <{ inr T1 tt2 }> => (stepf <{[y2:=tt2]t2}>) ++ acc
+        | _ => acc
+        end) (stepf t0) []
+
+  (* lists *)
+  | <{nil _}> => [t]
+  | <{t1 :: t2}> => fold_right
+                    (fun x2 acc2 => match x2 with
+                                    | <{ nil T }> => fold_right (fun x1 acc1 => <{ x1 :: x2 }> :: acc2 ) (stepf t1) []
+                                    | <{ h::tail }> => fold_right (fun x1 acc1 => <{ x1 :: x2 }> :: acc2 ) (stepf t1) []
+                                    | _ => acc2
+                                    end)
+                    (stepf t2) []
+  | <{case t1 of | nil => t2 | y1 :: y2 => t3}> => fold_right (fun t acc =>
+        match t with
+        | <{ nil _ }> => (stepf t2) ++ acc
+        | <{ tt1 :: tt2 }> => (stepf <{[y1:=tt1]([y2:=tt2]t2)}>) ++ acc
+        | _ => acc
+        end) (stepf t1) []
+
+  (* unit *)
+  | <{unit}> => [t]
+
+  (* pairs *)
+  | <{(t1 , t2)}> => fold_right (fun x1 acc1 => (map (fun x2 => <{(x1, x2)}>) (stepf t2)) ++ acc1) (stepf t1) []
+  | <{t.fst}> => fold_right (fun x acc => match x with
+                                          | <{ (v1, _) }> => v1::acc
+                                          | _ => acc
+                                          end) (stepf t) []
+  | <{t.snd}> => fold_right (fun x acc => match x with
+                                            | <{ (_, v2) }> => v2::acc
+                                            | _ => acc
+                                            end) (stepf t) []
+
+  (* let *)
+  | <{let y = t1 in t2}> => fold_right (fun x1 acc1 => (stepf <{[y:=x1]t2}>) ++ acc1) (stepf t1) []
+
+  (* fix *)
+  | <{ fix t' }> => [t']
+
+  (* non-deterministic choice *)
+  | <{t1 !! t2}> => (stepf t1) ++ (stepf t2)
+  end.
 End StepFunction.
 (** [] *)
 
