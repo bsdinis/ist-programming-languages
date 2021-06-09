@@ -598,11 +598,27 @@ Proof.
         destruct Hstep as [t2' Hstep].
         destruct Hstep as [H Hstep2].
         ** rewrite <- H.
+           apply ST_App2; try assumption.
            destruct stepf in Hstep2; try solve_by_invert.
-           apply in_inv in Hstep2. destruct Hstep2.
-           ***
-
-
+           apply In_split in Hstep2.
+           destruct Hstep2 as [l1 Hstep2].
+           destruct Hstep2 as [l2 Hstep2].
+           admit.
+        ** admit.
+        ** admit.
+        ** admit.
+        ** admit.
+        ** admit.
+        ** admit.
+        ** admit.
+    + admit.
+  - simpl in Hstep.
+    destruct (is_value t) eqn:Hval.
+      + apply is_value__value in Hval. destruct t; try solve_by_invert.
+        * apply in_inv in Hstep. destruct Hstep; try solve_by_invert.
+          rewrite <- H. apply ST_SuccNat.
+        * admit.
+      +
 
 
 (* TODO *)
