@@ -142,13 +142,13 @@ Fixpoint type_check (Gamma : context) (t : tm) : option ty :=
       end
 
   (* sums *)
-  | <{ inl TR t }> => (* TODO: add example *)
+  | <{ inl TR t }> =>
       T <- type_check Gamma t ;;
       return <{{ T + TR }}>
-  | <{ inr TL t }> => (* TODO: add example *)
+  | <{ inr TL t }> =>
       T <- type_check Gamma t ;;
       return <{{ TL + T }}>
-  | <{case t0 of | inl x1 => t1 | inr x2 => t2}> => (* TODO: add example *)
+  | <{case t0 of | inl x1 => t1 | inr x2 => t2}> =>
       T0 <- type_check Gamma t0 ;;
       match T0 with
       | <{{ X1 + X2 }}> =>
@@ -159,8 +159,8 @@ Fixpoint type_check (Gamma : context) (t : tm) : option ty :=
       end
 
   (* lists (the [tlcase] is given for free) *)
-  | <{ nil T }> => return <{{ List T }}> (* TODO: add example *)
-  | <{ h :: t }> => (* TODO: add example *)
+  | <{ nil T }> => return <{{ List T }}>
+  | <{ h :: t }> =>
     TH <- type_check Gamma h ;;
     TT <- type_check Gamma t ;;
     match TT with
@@ -178,45 +178,105 @@ Fixpoint type_check (Gamma : context) (t : tm) : option ty :=
       end
 
   (* unit *)
-  | <{ unit }> => return <{{ Unit }}> (* TODO: add example *)
+  | <{ unit }> => return <{{ Unit }}>
   (* pairs *)
-  | <{ (t1, t2) }> => (* TODO: add example *)
+  | <{ (t1, t2) }> =>
       T1 <- type_check Gamma t1 ;;
       T2 <- type_check Gamma t2 ;;
       return <{{ T1 * T2 }}>
-  | <{ t.fst }> => (* TODO: add example *)
+  | <{ t.fst }> =>
       T <- type_check Gamma t ;;
       match T with
       | <{{ T1 * _ }}> => return T1
       | _ => fail
       end
-  | <{ t.snd }> => (* TODO: add example *)
+  | <{ t.snd }> =>
       T <- type_check Gamma t ;;
       match T with
       | <{{ _ * T2 }}> => return T2
       | _ => fail
       end
   (* let *)
-  | <{ let x = t1 in t2 }> => (* TODO: add example *)
+  | <{ let x = t1 in t2 }> =>
       T1 <- type_check Gamma t1 ;;
       T2 <- type_check ( x |-> T1 ; Gamma) t2 ;;
       return T2
   (* fix *)
-  | <{ fix t }> => (* TODO: add example *)
+  | <{ fix t }> =>
       T <- type_check Gamma t ;;
       match T with
       | <{{ TT1 -> TT2 }}> => if eqb_ty TT1 TT2 then return TT1 else fail
       | _ => fail
       end
   (* non-deterministic choice *)
-  | <{ t1 !! t2 }> => (* TODO: add example *)
+  | <{ t1 !! t2 }> =>
       T1 <- type_check Gamma t1 ;;
       T2 <- type_check Gamma t2 ;;
       if eqb_ty T1 T2 then return T1 else fail
   end.
 
-(* TODO: Provide an example for each of the new cases that you implemented.
-*)
+Example type_sum_inl: type_check empty <{ inl (List Nat) 0 }> = Some <{{ Nat + (List Nat) }}>.
+Proof. auto. Qed.
+
+Example type_sum_inr: type_check empty <{ inr Nat (0 :: nil Nat) }> = Some <{{ Nat + (List Nat) }}>.
+Proof. auto. Qed.
+
+(* If the branches do not match, do not type check *)
+Example type_sum_case_neg: type_check empty <{
+  case (inr Nat (0 :: nil Nat)) of
+    | inl x => 0
+    | inr y => nil Nat }> = None.
+Proof. auto. Qed.
+
+(* If the branches do match, do type check *)
+Example type_sum_case_pos: type_check empty <{
+  case (inr Nat (0 :: nil Nat)) of
+    | inl x => 0
+    | inr y => 0 }> = Some <{{ Nat }}>.
+Proof. auto. Qed.
+
+Example type_list_nil: type_check empty <{ nil Nat }> = Some <{{ List Nat }}>.
+Proof. auto. Qed.
+
+Example type_list_cons: type_check empty <{ 0 :: nil Nat}> = Some <{{ List Nat }}>.
+Proof. auto. Qed.
+
+Example type_unit: type_check empty <{ unit }> = Some <{{ Unit }}>.
+Proof. auto. Qed.
+
+Example type_pair: type_check empty <{ (0, nil (List Nat)) }> = Some <{{ Nat * (List (List Nat)) }}>.
+Proof. auto. Qed.
+
+Example type_pair_fst: type_check empty <{ (0, nil (List Nat)).fst }> = Some <{{ Nat  }}>.
+Proof. auto. Qed.
+
+Example type_pair_snd: type_check empty <{ (0, nil (List Nat)).snd }> = Some <{{ (List (List Nat)) }}>.
+Proof. auto. Qed.
+
+Example type_let: type_check empty <{ let x = 3 in <{ x * 4 }> }> = Some <{{ Nat }}>.
+Proof. auto. Qed.
+
+Open Scope string_scope.
+Notation x := "x".
+Notation y := "y".
+Notation a := "a".
+Notation f := "f".
+Definition fact :=
+  <{fix
+      (\f:Nat->Nat,
+        \a:Nat,
+         if0 a then 1 else (a * (f (pred a))))}>.
+
+Example type_fix: type_check empty <{ fact }> = Some <{{ Nat -> Nat }}>.
+Proof. auto. Qed.
+
+(* If the branches do not match, do not type check *)
+Example type_non_det_neg: type_check empty <{ 0 !! nil Nat }> = None.
+Proof. auto. Qed.
+
+(* If the branches do match, do type check *)
+Example type_non_det_pos: type_check empty <{ 0 !! 1 }> = Some <{{ Nat }}>.
+Proof. auto. Qed.
 
 (** Just for fun, we'll do the soundness proof with just a bit more
     automation than above, using these "mega-tactics": *)
