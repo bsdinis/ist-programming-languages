@@ -53,7 +53,8 @@ Inductive ty : Type :=
   | Ty_Sum  : ty -> ty -> ty
   | Ty_List : ty -> ty
   | Ty_Unit : ty
-  | Ty_Prod : ty -> ty -> ty.
+  | Ty_Prod : ty -> ty -> ty
+  | Ty_NonDet : ty -> ty -> ty.
 
 Inductive tm : Type :=
   (* pure STLC *)
@@ -93,7 +94,7 @@ Inductive tm : Type :=
 
 
   (* non-deterministic choice *)
-  | (* TODO *)
+  | tm_nondet : tm -> tm -> tm.
 
 
 (** Note that, for brevity, we've omitted booleans and instead
@@ -196,8 +197,8 @@ Notation "'let' x '=' t1 'in' t2" :=
   (tm_let x t1 t2) (in custom stlc at level 0).
 
 Notation "'fix' t" := (tm_fix t) (in custom stlc at level 0).
-(* TODO: notation *)
 
+Notation "x '!!' y" := (tm_nondet x y) (in custom stlc at level 90, right associativity).
 
 (* ----------------------------------------------------------------- *)
 (** *** Substitution *)
@@ -248,16 +249,21 @@ Fixpoint subst (x : string) (s : tm) (t : tm) : tm :=
   (* unit *)
   | <{unit}> => <{unit}>
 
-  (* Complete the following cases. *)
-
   (* pairs *)
-  (* TODO *)
+  | <{(t1 , t2)}> =>
+    <{ ([x:=s] t1 , [x:=s] t2) }>
+  | <{t .fst}> =>
+    <{ ([x:=s] t) .fst }>
+  | <{t .snd}> =>
+    <{ ([x:=s] t) .snd }>
   (* let *)
-  (* TODO *)
+  | <{let y = t1 in t2}> =>
+    <{ let y = [x:=s] t1 in [x:=s] t2 }> (* TODO is this correct? *)
   (* fix *)
-  (* TODO *)
+  | <{fix t}> => <{fix ([x:=s] t)}>
   (* non-deterministic choice *)
-  (* TODO *)
+  | <{t1 !! t2}> =>
+    <{ [x:=s] t1 !! [x:=s] t2 }>
   end
 
 where "'[' x ':=' s ']' t" := (subst x s t) (in custom stlc).
@@ -374,17 +380,46 @@ Inductive step : tm -> tm -> Prop :=
        value vl ->
        <{case v1 :: vl of | nil => t2 | x1 :: x2 => t3}>
          -->  <{ [x2 := vl] ([x1 := v1] t3) }>
-
-  (* Add rules for the following extensions. *)
-
   (* pairs *)
-  (* TODO *)
+  | ST_Pair1 : forall t1 t1' t2,
+      t1 --> t1' ->
+      <{ (t1, t2) }> --> <{ (t1', t2) }>
+  | ST_Pair2 : forall v1 t2 t2',
+      value v1 ->
+      t2 --> t2' ->
+      <{ (v1, t2) }> --> <{ (v1, t2') }>
+  | ST_Fst1: forall t t',
+      t --> t' ->
+      <{ t.fst }> --> <{ t'.fst }>
+  | ST_FstPar : forall v1 v2,
+      value v1 ->
+      value v2 ->
+      <{ (v1, v2).fst }> --> v1
+  | ST_Snd1: forall t t',
+      t --> t' ->
+      <{ t.snd }> --> <{ t'.snd }>
+  | ST_SndPair : forall v1 v2,
+      value v1 ->
+      value v2 ->
+      <{ (v1, v2).snd }> --> v2
   (* let *)
-  (* TODO *)
+  | ST_LetValue : forall x v1 t2,
+      value v1 ->
+      <{ let x = v1 in t2 }> --> <{ [ x := v1] t2 }>
+  | ST_Let1 : forall x t1 t1' t2,
+      t1 --> t1' ->
+      <{ let x = t1 in t2 }> --> <{ let x = t1' in t2  }>
   (* fix *)
-  (* TODO *)
+  | ST_Fix1: forall t1 t1',
+      t1 --> t1' ->
+      <{ fix t1 }> --> <{ fix t1' }>
+  | ST_FixAbs: forall xf T1 t1,
+      <{ fix (\xf:T1,t1) }> --> <{ [xf:=fix (\xf:T1, t1)] t1  }>
   (* non-deterministic choice *)
-  (* TODO *)
+  | ST_NonDet1 : forall t1 t2,
+      <{t1 !! t2}> --> <{t1}>
+  | ST_NonDet2 : forall t1 t2,
+      <{t1 !! t2}> --> <{t2}>
 
   where "t '-->' t'" := (step t t').
 
@@ -460,17 +495,31 @@ Inductive has_type : context -> tm -> ty -> Prop :=
   (* unit *)
   | T_Unit : forall Gamma,
       Gamma |- unit \in Unit
-
-  (* Add rules for the following extensions. *)
-
   (* pairs *)
-  (* TODO *)
+  | T_Pair: forall Gamma t1 t2 T1 T2,
+      Gamma |- t1 \in T1 ->
+      Gamma |- t2 \in T2 ->
+      Gamma |- (t1, t2) \in (T1 * T2)
+  | T_Fst: forall Gamma t T1 T2,
+      Gamma |- t \in (T1 * T2) ->
+      Gamma |- t.fst \in T1
+  | T_Snd: forall Gamma t T1 T2,
+      Gamma |- t \in (T1 * T2) ->
+      Gamma |- t.snd \in T2
   (* let *)
-  (* TODO *)
+  | T_Let: forall Gamma x t1 t2 T1 T2,
+      Gamma |- t1 \in T1 ->
+      (x |-> T1; Gamma) |- t2 \in T2 ->
+      Gamma |- let x = t1 in t2 \in T2
   (* fix *)
-  (* TODO *)
+  | T_Fix : forall Gamma t T,
+      Gamma |- t \in (T -> T) ->
+      Gamma |- fix t \in T
   (* non-deterministic choice *)
-  (* TODO *)
+  | T_NonDet : forall Gamma t1 t2 T0,
+      Gamma |- t1 \in T0 ->
+      Gamma |- t2 \in T0 ->
+      Gamma |- t1 !! t2 \in T0
 
 where "Gamma '|-' t '\in' T" := (has_type Gamma t T).
 
