@@ -16,7 +16,7 @@ From SecondProject Require Import Stlc.
 
 Module STLCExtended.
 
-(** **** Exercise: 3 stars, standard (STLCE_definitions) 
+(** **** Exercise: 3 stars, standard (STLCE_definitions)
 
     In this series of exercises, you will formalize some of the
     extensions described in this chapter.  We've provided the
@@ -258,7 +258,10 @@ Fixpoint subst (x : string) (s : tm) (t : tm) : tm :=
     <{ ([x:=s] t) .snd }>
   (* let *)
   | <{let y = t1 in t2}> =>
-    <{ let y = [x:=s] t1 in [x:=s] t2 }> (* TODO we need to garantee x != y if == then change letter scheck slides *)
+      if (eqb_string x y) then
+        <{ let y = [x:=s] t1 in t2 }>
+      else (* x<>y | simple subst *)
+        <{ let y = [x:=s] t1 in [x:=s] t2 }>
   (* fix *)
   | <{fix t}> => <{fix ([x:=s] t)}>
   (* non-deterministic choice *)
@@ -532,7 +535,7 @@ Definition manual_grade_for_extensions_definition : option (nat*string) := None.
 (* ================================================================= *)
 (** ** Examples *)
 
-(** **** Exercise: 3 stars, standard (STLCE_examples) 
+(** **** Exercise: 3 stars, standard (STLCE_examples)
 
     This section presents formalized versions of the examples from
     above (plus several more).
@@ -890,10 +893,80 @@ End FixTest4.
 (* ----------------------------------------------------------------- *)
 (** *** [choice] *)
 
-(* TODO: give at least one example of a term that uses non-deterministic
+(* DONE: give at least one example of a term that uses non-deterministic
    choice and, as in the examples above, include examples and proofs
    related to typing and reduction.
 *)
+
+Module ChoiceTest1.
+
+Definition test := <{ 0 !! 1 }>.
+
+Example typechecks :
+  empty |- test \in Nat.
+Proof.
+  unfold test.
+  eauto 5.
+Qed.
+
+Example reduces0 :
+  test -->* 0.
+Proof.
+  unfold test.
+  eapply multi_step.
+  - apply ST_NonDet1.
+  - normalize.
+Qed.
+
+Example reduces1 :
+  test -->* 1.
+Proof.
+  unfold test.
+  normalize.
+Qed.
+
+End ChoiceTest1.
+
+
+Module ChoiceTest2.
+
+Definition test := <{ 0 !! 1 !! 2 }>.
+
+Example typechecks :
+  empty |- test \in Nat.
+Proof.
+  unfold test.
+  eauto 5.
+Qed.
+
+Example reduces0 :
+  test -->* 0.
+Proof.
+  unfold test.
+  eapply multi_step.
+  - apply ST_NonDet1.
+  - normalize.
+Qed.
+
+Example reduces1 :
+  test -->* 1.
+Proof.
+  unfold test.
+  eapply multi_step.
+  - apply ST_NonDet2.
+  - eapply multi_step.
+    -- apply ST_NonDet1.
+    -- normalize.
+Qed.
+
+Example reduces2 :
+  test -->* 2.
+Proof.
+  unfold test.
+  normalize.
+Qed.
+
+End ChoiceTest2.
 
 End Examples.
 (** [] *)
@@ -908,7 +981,7 @@ End Examples.
 (* ----------------------------------------------------------------- *)
 (** *** Progress *)
 
-(** **** Exercise: 3 stars, standard (STLCE_progress) 
+(** **** Exercise: 3 stars, standard (STLCE_progress)
 
     Complete the proof of [progress].
 
@@ -1117,7 +1190,7 @@ Qed.
 (* ----------------------------------------------------------------- *)
 (** *** Substitution *)
 
-(** **** Exercise: 2 stars, standard (STLCE_subst_preserves_typing) 
+(** **** Exercise: 2 stars, standard (STLCE_subst_preserves_typing)
 
     Complete the proof of [substitution_preserves_typing]. *)
 
@@ -1195,16 +1268,13 @@ Proof with eauto.
         rewrite (update_permute _ _ _ _ _ _ n) in H9.
         assumption.
   - (* tm_let *)
-    eapply T_Let...
-    destruct (eqb_stringP s x) in H6; subst.
-    + (* y=x *)
+    destruct (eqb_stringP x s); subst; eapply T_Let...
+    + (* s=x *)
+      rewrite update_shadow in H6. assumption.
+    + (* s<>x *)
       apply IHt2.
-      rewrite update_permute in H6.
-      assumption.
-      admit.
-    + (* y<>x *)
-      admit.
-Admitted.
+      rewrite update_permute...
+Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_substitution_preserves_typing : option (nat*string) := None.
@@ -1213,7 +1283,7 @@ Definition manual_grade_for_substitution_preserves_typing : option (nat*string) 
 (* ----------------------------------------------------------------- *)
 (** *** Preservation *)
 
-(** **** Exercise: 3 stars, standard (STLCE_preservation) 
+(** **** Exercise: 3 stars, standard (STLCE_preservation)
 
     Complete the proof of [preservation]. *)
 
