@@ -927,6 +927,12 @@ Proof.
     inversion Hval.
 Qed.
 
+Ltac solve_values_cannot_be_reduced Hval H :=
+  apply is_value__value in Hval;
+  apply values_cannot_be_reduced in H;
+  try contradiction;
+  try assumption.
+
 (* Completeness of [stepf]. *)
 Theorem complete_stepf : forall t t',
     t --> t'  ->  In t' (stepf t).
@@ -939,14 +945,8 @@ Proof.
     + destruct (is_value t2) eqn:Hval2.
       * simpl. intros t' Hstep.
         inversion Hstep; simpl; auto.
-        ** apply is_value__value in Hval1.
-           apply values_cannot_be_reduced in H2.
-           contradiction.
-           assumption.
-        ** apply is_value__value in Hval2.
-           apply values_cannot_be_reduced in H3.
-           contradiction.
-           assumption.
+        ** solve_values_cannot_be_reduced Hval1 H2.
+        ** solve_values_cannot_be_reduced Hval2 H3.
       * intros t' Hstep.
         inversion Hstep.
         ** apply is_value__value in H2.
@@ -971,9 +971,7 @@ Proof.
     intros t' Hstep.
     destruct (is_value t) eqn:Hval; simpl.
     + inversion Hstep.
-      * apply is_value__value in Hval.
-        apply values_cannot_be_reduced in H0.
-        contradiction. assumption.
+      * solve_values_cannot_be_reduced Hval H0.
       * simpl; auto.
     + destruct (is_value t) eqn:Hval'; try solve_by_invert.
       inversion Hstep.
