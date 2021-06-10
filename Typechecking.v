@@ -952,9 +952,7 @@ Proof.
         ** apply is_value__value in H2.
            rewrite H2 in Hval2.
            inversion Hval2.
-        ** apply is_value__value in Hval1.
-           apply values_cannot_be_reduced in H2.
-            contradiction. assumption.
+        ** solve_values_cannot_be_reduced Hval1 H2.
         ** destruct t1; try solve_by_invert;
            apply in_map_iff; exists t2'; split; auto.
     + intros t' Hstep.
@@ -982,11 +980,8 @@ Proof.
   - (* pred *)
     intros t' Hstep.
     destruct (is_value t) eqn:Hval; simpl.
-    + inversion Hstep.
-      * apply is_value__value in Hval.
-        apply values_cannot_be_reduced in H0.
-        contradiction. assumption.
-      * simpl; auto.
+    + inversion Hstep; simpl; auto.
+      solve_values_cannot_be_reduced Hval H0.
     + destruct (is_value t) eqn:Hval'; try solve_by_invert.
       inversion Hstep.
       apply IHt in H0.
@@ -998,29 +993,18 @@ Proof.
     destruct (is_value t1) eqn:Hval1.
     + destruct (is_value t2) eqn:Hval2.
       * simpl. intros t' Hstep.
-        inversion Hstep.
-        ** simpl; auto.
-        ** apply is_value__value in Hval1.
-           apply values_cannot_be_reduced in H2.
-           contradiction.
-           assumption.
-        ** apply is_value__value in Hval2.
-           apply values_cannot_be_reduced in H3.
-           contradiction.
-           assumption.
+        inversion Hstep; simpl; auto.
+        ** solve_values_cannot_be_reduced Hval1 H2.
+        ** solve_values_cannot_be_reduced Hval2 H3.
       * intros t' Hstep.
-        inversion Hstep.
-        ** simpl; auto.
-        ** apply is_value__value in Hval1.
-           apply values_cannot_be_reduced in H2.
-           contradiction. assumption.
+        inversion Hstep; simpl; auto.
+        ** solve_values_cannot_be_reduced Hval1 H2.
         ** destruct t1; try solve_by_invert; try ( apply in_map_iff; exists t2'; split; auto).
-           *** destruct t2; try solve_by_invert; try ( apply in_map_iff; exists t2'; simpl; auto).
-               split; try reflexivity.
-               inversion H3; simpl; auto.
+           destruct t2; try solve_by_invert; try ( apply in_map_iff; exists t2'; simpl; auto).
+           split; try reflexivity.
+           inversion H3; simpl; auto.
     + intros t' Hstep.
-      inversion Hstep.
-      * simpl; auto.
+      inversion Hstep; simpl; auto.
       * destruct t1; try solve_by_invert;
         try ( apply in_map_iff; exists t1'; split; auto);
         try ( apply in_map_iff; exists t2'; split; auto).
@@ -1030,10 +1014,7 @@ Proof.
     simpl.
     destruct (is_value t1) eqn:Hval1.
     + inversion Hstep; simpl; auto.
-      apply is_value__value in Hval1.
-      apply values_cannot_be_reduced in H3.
-      contradiction.
-      assumption.
+      solve_values_cannot_be_reduced Hval1 H3.
     + inversion Hstep.
       * apply in_map_iff.
         exists t1'.
@@ -1076,16 +1057,12 @@ Proof.
       * destruct (is_value t1) eqn:Hval1.
         ** simpl. apply is_value__value in Hval1.
            assert (value <{ inl t t1 }>) by auto.
-           apply values_cannot_be_reduced in H5.
-           contradiction.
-           assumption.
+           solve_values_cannot_be_reduced Hval1 H5.
         ** apply in_map_iff; exists t0'; simpl; auto.
       * destruct (is_value t1) eqn:Hval1.
         ** simpl. apply is_value__value in Hval1.
            assert (value <{ inr t t1 }>) by auto.
-           apply values_cannot_be_reduced in H5.
-           contradiction.
-           assumption.
+           solve_values_cannot_be_reduced Hval1 H5.
         ** apply in_map_iff; exists t0'; simpl; auto.
       * apply in_map_iff; exists t0'; simpl; auto.
       * apply in_map_iff; exists t0'; simpl; auto.
@@ -1108,19 +1085,11 @@ Proof.
     + destruct (is_value t2) eqn:Hval2.
       * simpl. intros t' Hstep.
         inversion Hstep.
-        ** apply is_value__value in Hval1.
-           apply values_cannot_be_reduced in H2.
-           contradiction.
-           assumption.
-        ** apply is_value__value in Hval2.
-           apply values_cannot_be_reduced in H3.
-           contradiction.
-           assumption.
+        ** solve_values_cannot_be_reduced Hval1 H2.
+        ** solve_values_cannot_be_reduced Hval2 H3.
       * intros t' Hstep.
         inversion Hstep.
-        ** apply is_value__value in Hval1.
-           apply values_cannot_be_reduced in H2.
-            contradiction. assumption.
+        ** solve_values_cannot_be_reduced Hval1 H2.
         ** apply in_map_iff. exists t2'; split; auto.
     + intros t' Hstep.
       inversion Hstep.
@@ -1138,9 +1107,7 @@ Proof.
         apply is_value__value in Hval1.
         apply is_value__value in Hval2.
         assert (value <{ t1_1 :: t1_2 }>) by auto.
-        apply values_cannot_be_reduced in H5.
-        contradiction.
-        assumption.
+        solve_values_cannot_be_reduced Hval1 H5.
       * apply in_map_iff; exists t1'; simpl; auto.
     + apply is_value__value in H5.
       apply is_value__value in H6.
@@ -1156,19 +1123,11 @@ Proof.
     + destruct (is_value t2) eqn:Hval2.
       * simpl. intros t' Hstep.
         inversion Hstep.
-        ** apply is_value__value in Hval1.
-           apply values_cannot_be_reduced in H2.
-           contradiction.
-           assumption.
-        ** apply is_value__value in Hval2.
-           apply values_cannot_be_reduced in H3.
-           contradiction.
-           assumption.
+        ** solve_values_cannot_be_reduced Hval1 H2.
+        ** solve_values_cannot_be_reduced Hval2 H3.
       * intros t' Hstep.
         inversion Hstep.
-        ** apply is_value__value in Hval1.
-           apply values_cannot_be_reduced in H2.
-            contradiction. assumption.
+        ** solve_values_cannot_be_reduced Hval1 H2.
         ** apply in_map_iff. exists t2'; split; auto.
     + intros t' Hstep.
       inversion Hstep.
@@ -1178,9 +1137,7 @@ Proof.
     intros t' Hstep.
     destruct (is_value t) eqn:Hval; simpl.
     + inversion Hstep.
-      * apply is_value__value in Hval.
-        apply values_cannot_be_reduced in H0.
-        contradiction. assumption.
+      * solve_values_cannot_be_reduced Hval H0.
       * rewrite <- H2 in *.
         destruct (is_value <{ (v1, v2) }>) eqn: Hval12; try (simpl; auto).
         assert (value <{ (v1, v2) }>).
@@ -1203,9 +1160,7 @@ Proof.
     intros t' Hstep.
     destruct (is_value t) eqn:Hval; simpl.
     + inversion Hstep.
-      * apply is_value__value in Hval.
-        apply values_cannot_be_reduced in H0.
-        contradiction. assumption.
+      * solve_values_cannot_be_reduced Hval H0.
       * rewrite <- H2 in *.
         destruct (is_value <{ (v1, v2) }>) eqn: Hval12; try (simpl; auto).
         assert (value <{ (v1, v2) }>).
@@ -1219,8 +1174,7 @@ Proof.
       rewrite <- H1 in Hstep.
       * apply in_map_iff. exists t'0; split; auto.
       * rewrite <- H2 in *. rewrite <- H in Hval'.
-        assert (value <{ (v1, v2) }>).
-        apply v_pair; assumption.
+        assert (value <{ (v1, v2) }>) by (apply v_pair; assumption).
         apply is_value__value in H3.
         rewrite H3 in Hval'.
         inversion Hval'.
@@ -1229,10 +1183,7 @@ Proof.
     simpl.
     destruct (is_value t1) eqn:Hval1; simpl.
     * inversion Hstep; auto.
-      apply is_value__value in Hval1.
-      apply values_cannot_be_reduced in H3.
-      contradiction.
-      assumption.
+    solve_values_cannot_be_reduced Hval1 H3.
     * inversion Hstep.
         ** apply is_value__value in H3.
            rewrite H3 in Hval1.
@@ -1243,11 +1194,8 @@ Proof.
   - (* fix *)
     intros t' Hstep.
     destruct (is_value t) eqn:Hval; simpl.
-    + inversion Hstep.
-      * apply is_value__value in Hval.
-        apply values_cannot_be_reduced in H0.
-        contradiction. assumption.
-      * simpl; auto.
+    + inversion Hstep; simpl; auto.
+      solve_values_cannot_be_reduced Hval H0.
     + destruct (is_value t) eqn:Hval'; try solve_by_invert.
       inversion Hstep.
       apply IHt in H0.
