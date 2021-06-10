@@ -933,6 +933,11 @@ Ltac solve_values_cannot_be_reduced Hval H :=
   try contradiction;
   try assumption.
 
+Ltac solve_value_but_is_value_false Hval H :=
+  apply is_value__value in H;
+  rewrite H in Hval;
+  inversion Hval.
+
 Ltac solve_in_map_iff_exists t :=
   apply in_map_iff; exists t; try split; auto.
 
@@ -943,8 +948,7 @@ Proof.
   intros t.
   induction t; try (intros t' Hstep; solve_by_invert).
   - (* application *)
-    simpl.
-    destruct (is_value t1) eqn:Hval1.
+    simpl. destruct (is_value t1) eqn:Hval1.
     + destruct (is_value t2) eqn:Hval2.
       * simpl. intros t' Hstep.
         inversion Hstep; simpl; auto.
@@ -952,9 +956,7 @@ Proof.
         ** solve_values_cannot_be_reduced Hval2 H3.
       * intros t' Hstep.
         inversion Hstep.
-        ** apply is_value__value in H2.
-           rewrite H2 in Hval2.
-           inversion Hval2.
+        ** solve_value_but_is_value_false Hval2 H2.
         ** solve_values_cannot_be_reduced Hval1 H2.
         ** destruct t1; try solve_by_invert;
            solve_in_map_iff_exists t2'.
@@ -965,9 +967,7 @@ Proof.
         inversion Hval1.
       * destruct t1; try solve_by_invert;
         solve_in_map_iff_exists t1'.
-      * apply is_value__value in H1.
-        rewrite H1 in Hval1.
-        inversion Hval1.
+      * solve_value_but_is_value_false Hval1 H1.
   - (* succ *)
     intros t' Hstep.
     destruct (is_value t) eqn:Hval; simpl.
@@ -992,8 +992,7 @@ Proof.
       * destruct t; try solve_by_invert; try solve_in_map_iff_exists t1'.
       * simpl; auto.
   - (* mult *)
-    simpl.
-    destruct (is_value t1) eqn:Hval1.
+    simpl. destruct (is_value t1) eqn:Hval1.
     + destruct (is_value t2) eqn:Hval2.
       * simpl. intros t' Hstep.
         inversion Hstep; simpl; auto.
@@ -1011,8 +1010,7 @@ Proof.
         try solve_in_map_iff_exists t2'.
       * apply is_value__value in H1. rewrite H1 in Hval1. inversion Hval1.
   - (* if0 *)
-    intros t' Hstep.
-    simpl.
+    intros t' Hstep. simpl.
     destruct (is_value t1) eqn:Hval1.
     + inversion Hstep; simpl; auto.
       solve_values_cannot_be_reduced Hval1 H3.
@@ -1025,20 +1023,17 @@ Proof.
         simpl in Hval1.
         inversion Hval1.
   - (* inl *)
-    intros t' Hstep.
-    simpl.
+    intros t' Hstep. simpl.
     inversion Hstep.
     rewrite <- H1 in *.
     solve_in_map_iff_exists t1'.
   - (* inr *)
-    intros t' Hstep.
-    simpl.
+    intros t' Hstep. simpl.
     inversion Hstep.
     rewrite <- H1 in *.
     solve_in_map_iff_exists t2'.
   - (* case *)
-    intros t' Hstep.
-    simpl.
+    intros t' Hstep. simpl.
     inversion Hstep; simpl; auto.
     + destruct t1; try solve_by_invert;
       try solve_in_map_iff_exists t1'.
@@ -1069,14 +1064,11 @@ Proof.
       * solve_in_map_iff_exists t0'.
       * solve_in_map_iff_exists t0'.
     + apply is_value__value in H5.
-      rewrite H5.
-      simpl; auto.
+      rewrite H5. simpl; auto.
     + apply is_value__value in H5.
-      rewrite H5.
-      simpl; auto.
+      rewrite H5. simpl; auto.
   - (* cons *)
-    simpl.
-    destruct (is_value t1) eqn:Hval1.
+    simpl. destruct (is_value t1) eqn:Hval1.
     + destruct (is_value t2) eqn:Hval2.
       * simpl. intros t' Hstep.
         inversion Hstep.
@@ -1089,10 +1081,9 @@ Proof.
     + intros t' Hstep.
       inversion Hstep.
       * solve_in_map_iff_exists t1'.
-      * apply is_value__value in H1. rewrite H1 in Hval1. inversion Hval1.
+      * solve_value_but_is_value_false Hval1 H1.
   - (* lcase *)
-    intros t' Hstep.
-    simpl.
+    intros t' Hstep. simpl.
     inversion Hstep; simpl; auto.
     + destruct t1; try solve_by_invert;
       try solve_in_map_iff_exists t1'.
@@ -1124,7 +1115,7 @@ Proof.
     + intros t' Hstep.
       inversion Hstep.
       * solve_in_map_iff_exists t1'.
-      * apply is_value__value in H1. rewrite H1 in Hval1. inversion Hval1.
+      * solve_value_but_is_value_false Hval1 H1.
   - (* fst *)
     intros t' Hstep.
     destruct (is_value t) eqn:Hval; simpl.
@@ -1134,9 +1125,8 @@ Proof.
         destruct (is_value <{ (v1, v2) }>) eqn: Hval12; try (simpl; auto).
         assert (value <{ (v1, v2) }>).
         ** apply v_pair; assumption.
-        ** assert (is_value <{ (v1, v2) }> = true).
-           *** apply is_value__value; assumption.
-           *** rewrite H4 in Hval12. inversion Hval12.
+        ** assert (is_value <{ (v1, v2) }> = true) by (apply is_value__value; assumption).
+           rewrite H4 in Hval12. inversion Hval12.
     + destruct (is_value t) eqn:Hval'; try solve_by_invert.
       inversion Hstep.
       apply IHt in H0.
@@ -1145,9 +1135,7 @@ Proof.
       * rewrite <- H2 in *. rewrite <- H in Hval'.
         assert (value <{ (v1, v2) }>).
         apply v_pair; assumption.
-        apply is_value__value in H3.
-        rewrite H3 in Hval'.
-        inversion Hval'.
+        solve_value_but_is_value_false Hval' H3.
   - (* snd *)
     intros t' Hstep.
     destruct (is_value t) eqn:Hval; simpl.
@@ -1165,20 +1153,15 @@ Proof.
       * solve_in_map_iff_exists t'0.
       * rewrite <- H2 in *. rewrite <- H in Hval'.
         assert (value <{ (v1, v2) }>) by (apply v_pair; assumption).
-        apply is_value__value in H3.
-        rewrite H3 in Hval'.
-        inversion Hval'.
+        solve_value_but_is_value_false Hval' H3.
   - (* let *)
-    intros t' Hstep.
-    simpl.
+    intros t' Hstep. simpl.
     destruct (is_value t1) eqn:Hval1; simpl.
-    * inversion Hstep; auto.
-    solve_values_cannot_be_reduced Hval1 H3.
-    * inversion Hstep.
-        ** apply is_value__value in H3.
-           rewrite H3 in Hval1.
-           inversion Hval1.
-        ** solve_in_map_iff_exists t1'.
+    + inversion Hstep; auto.
+      solve_values_cannot_be_reduced Hval1 H3.
+    + inversion Hstep.
+      * solve_value_but_is_value_false Hval1 H3.
+      * solve_in_map_iff_exists t1'.
   - (* fix *)
     intros t' Hstep.
     destruct (is_value t) eqn:Hval; simpl.
@@ -1188,8 +1171,8 @@ Proof.
       inversion Hstep.
       apply IHt in H0.
       rewrite <- H1 in Hstep.
-      * destruct t; try solve_by_invert; solve_in_map_iff_exists t1'.
-      * simpl. auto.
+      * destruct t; try solve_by_invert; try solve_in_map_iff_exists t1'.
+      * simpl; auto.
   - (* non determinism *)
     intros t' Hstep.
     inversion Hstep; simpl; auto.
