@@ -449,7 +449,7 @@ Proof.
     + apply v_lcons; inversion H; apply andb_true_iff in H1; destruct H1 as [H1 H2]; auto.
     + apply v_unit.
     + apply v_pair; inversion H; apply andb_true_iff in H1; destruct H1 as [H1 H2]; auto.
-  - (* -> *)
+  - (* <- *)
     intro H.
     induction t; try solve_by_invert; try simpl; try reflexivity.
     + inversion H. apply IHt in H1. assumption.
