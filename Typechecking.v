@@ -968,26 +968,15 @@ Proof.
            contradiction.
            assumption.
       * intros t' Hstep.
-        apply in_map_iff.
-        eexists.
-        split.
-        ** inversion Hstep.
-           apply is_value__value in Hval1.
+        inversion Hstep.
+        ** apply is_value__value in Hval1.
            apply values_cannot_be_reduced in H2.
-           *** contradiction.
-           *** assumption.
-           *** admit.
-        ** inversion Hstep.
-           *** apply is_value__value in Hval1.
-               apply values_cannot_be_reduced in  H2.
-               contradiction.
-               assumption.
-           *** admit.
+            contradiction. assumption.
+        ** apply in_map_iff. exists t2'; split; auto.
     + intros t' Hstep.
-      apply in_map_iff.
-      eexists; split.
-      * admit.
-      * admit.
+      inversion Hstep.
+      * apply in_map_iff; exists t1'; split; auto.
+      * apply is_value__value in H1. rewrite H1 in Hval1. inversion Hval1.
   - (* fst *)
     intros t' Hstep.
     destruct (is_value t) eqn:Hval; simpl.
@@ -1039,7 +1028,10 @@ Proof.
         rewrite H3 in Hval'.
         inversion Hval'.
   - (* let *)
-    admit.
+    intros t' Hstep.
+    inversion Hstep.
+    * admit.
+    * admit.
   - (* fix *)
     intros t' Hstep.
     destruct (is_value t) eqn:Hval; simpl.
