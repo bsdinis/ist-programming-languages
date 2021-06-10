@@ -933,6 +933,9 @@ Ltac solve_values_cannot_be_reduced Hval H :=
   try contradiction;
   try assumption.
 
+Ltac solve_in_map_iff_exists t :=
+  apply in_map_iff; exists t; try split; auto.
+
 (* Completeness of [stepf]. *)
 Theorem complete_stepf : forall t t',
     t --> t'  ->  In t' (stepf t).
@@ -954,14 +957,14 @@ Proof.
            inversion Hval2.
         ** solve_values_cannot_be_reduced Hval1 H2.
         ** destruct t1; try solve_by_invert;
-           apply in_map_iff; exists t2'; split; auto.
+           solve_in_map_iff_exists t2'.
     + intros t' Hstep.
       inversion Hstep.
       * rewrite <- H in Hval1.
         simpl in Hval1.
         inversion Hval1.
       * destruct t1; try solve_by_invert;
-         apply in_map_iff; exists t1'; split; auto.
+        solve_in_map_iff_exists t1'.
       * apply is_value__value in H1.
         rewrite H1 in Hval1.
         inversion Hval1.
@@ -975,7 +978,7 @@ Proof.
       inversion Hstep.
       apply IHt in H0.
       rewrite <- H1 in Hstep.
-      * destruct t; try solve_by_invert; try ( apply in_map_iff; exists t1'; split; auto).
+      * destruct t; try solve_by_invert; try solve_in_map_iff_exists t1'.
       * simpl; auto.
   - (* pred *)
     intros t' Hstep.
@@ -986,7 +989,7 @@ Proof.
       inversion Hstep.
       apply IHt in H0.
       rewrite <- H1 in Hstep.
-      * destruct t; try solve_by_invert; try ( apply in_map_iff; exists t1'; split; auto).
+      * destruct t; try solve_by_invert; try solve_in_map_iff_exists t1'.
       * simpl; auto.
   - (* mult *)
     simpl.
@@ -999,15 +1002,13 @@ Proof.
       * intros t' Hstep.
         inversion Hstep; simpl; auto.
         ** solve_values_cannot_be_reduced Hval1 H2.
-        ** destruct t1; try solve_by_invert; try ( apply in_map_iff; exists t2'; split; auto).
-           destruct t2; try solve_by_invert; try ( apply in_map_iff; exists t2'; simpl; auto).
-           split; try reflexivity.
-           inversion H3; simpl; auto.
+        ** destruct t1; try solve_by_invert; try solve_in_map_iff_exists t2'.
+           destruct t2; try solve_by_invert; try solve_in_map_iff_exists t2'.
     + intros t' Hstep.
       inversion Hstep; simpl; auto.
       * destruct t1; try solve_by_invert;
-        try ( apply in_map_iff; exists t1'; split; auto);
-        try ( apply in_map_iff; exists t2'; split; auto).
+        try solve_in_map_iff_exists t1';
+        try solve_in_map_iff_exists t2'.
       * apply is_value__value in H1. rewrite H1 in Hval1. inversion Hval1.
   - (* if0 *)
     intros t' Hstep.
@@ -1016,9 +1017,7 @@ Proof.
     + inversion Hstep; simpl; auto.
       solve_values_cannot_be_reduced Hval1 H3.
     + inversion Hstep.
-      * apply in_map_iff.
-        exists t1'.
-        auto.
+      * solve_in_map_iff_exists t1'.
       * rewrite <- H0 in Hval1.
         simpl in Hval1.
         inversion Hval1.
@@ -1030,49 +1029,45 @@ Proof.
     simpl.
     inversion Hstep.
     rewrite <- H1 in *.
-    apply in_map_iff.
-    exists t1'.
-    split; auto.
+    solve_in_map_iff_exists t1'.
   - (* inr *)
     intros t' Hstep.
     simpl.
     inversion Hstep.
     rewrite <- H1 in *.
-    apply in_map_iff.
-    exists t2'.
-    split; auto.
+    solve_in_map_iff_exists t2'.
   - (* case *)
     intros t' Hstep.
     simpl.
     inversion Hstep; simpl; auto.
     + destruct t1; try solve_by_invert;
-      try (apply in_map_iff; exists t1'; split; auto).
+      try solve_in_map_iff_exists t1'.
       destruct (is_value t1_1 && is_value t1_2) eqn:Hval12.
-      * apply in_map_iff; exists t0'; simpl; auto.
-      * apply in_map_iff; exists t0'; simpl; auto.
-      * apply in_map_iff; exists t0'; simpl; auto.
-      * apply in_map_iff; exists t0'; simpl; auto.
-      * apply in_map_iff; exists t0'; simpl; auto.
-      * apply in_map_iff; exists t0'; simpl; auto.
+      * solve_in_map_iff_exists t0'.
+      * solve_in_map_iff_exists t0'.
+      * solve_in_map_iff_exists t0'.
+      * solve_in_map_iff_exists t0'.
+      * solve_in_map_iff_exists t0'.
+      * solve_in_map_iff_exists t0'.
       * destruct (is_value t1) eqn:Hval1.
         ** simpl. apply is_value__value in Hval1.
            assert (value <{ inl t t1 }>) by auto.
            solve_values_cannot_be_reduced Hval1 H5.
-        ** apply in_map_iff; exists t0'; simpl; auto.
+        ** solve_in_map_iff_exists t0'.
       * destruct (is_value t1) eqn:Hval1.
         ** simpl. apply is_value__value in Hval1.
            assert (value <{ inr t t1 }>) by auto.
            solve_values_cannot_be_reduced Hval1 H5.
-        ** apply in_map_iff; exists t0'; simpl; auto.
-      * apply in_map_iff; exists t0'; simpl; auto.
-      * apply in_map_iff; exists t0'; simpl; auto.
-      * apply in_map_iff; exists t0'; simpl; auto.
-      * apply in_map_iff; exists t0'; simpl; auto.
-      * apply in_map_iff; exists t0'; simpl; auto.
-      * apply in_map_iff; exists t0'; simpl; auto.
-      * apply in_map_iff; exists t0'; simpl; auto.
-      * apply in_map_iff; exists t0'; simpl; auto.
-      * apply in_map_iff; exists t0'; split; auto.
+        ** solve_in_map_iff_exists t0'.
+      * solve_in_map_iff_exists t0'.
+      * solve_in_map_iff_exists t0'.
+      * solve_in_map_iff_exists t0'.
+      * solve_in_map_iff_exists t0'.
+      * solve_in_map_iff_exists t0'.
+      * solve_in_map_iff_exists t0'.
+      * solve_in_map_iff_exists t0'.
+      * solve_in_map_iff_exists t0'.
+      * solve_in_map_iff_exists t0'.
     + apply is_value__value in H5.
       rewrite H5.
       simpl; auto.
@@ -1090,17 +1085,17 @@ Proof.
       * intros t' Hstep.
         inversion Hstep.
         ** solve_values_cannot_be_reduced Hval1 H2.
-        ** apply in_map_iff. exists t2'; split; auto.
+        ** solve_in_map_iff_exists t2'.
     + intros t' Hstep.
       inversion Hstep.
-      * apply in_map_iff; exists t1'; split; auto.
+      * solve_in_map_iff_exists t1'.
       * apply is_value__value in H1. rewrite H1 in Hval1. inversion Hval1.
   - (* lcase *)
     intros t' Hstep.
     simpl.
     inversion Hstep; simpl; auto.
     + destruct t1; try solve_by_invert;
-      try (apply in_map_iff; exists t1'; split; auto).
+      try solve_in_map_iff_exists t1'.
       destruct (is_value t1_1 && is_value t1_2) eqn:Hval12.
       * apply andb_true_iff in Hval12.
         destruct Hval12 as [Hval1 Hval2].
@@ -1108,13 +1103,10 @@ Proof.
         apply is_value__value in Hval2.
         assert (value <{ t1_1 :: t1_2 }>) by auto.
         solve_values_cannot_be_reduced Hval1 H5.
-      * apply in_map_iff; exists t1'; simpl; auto.
+      * solve_in_map_iff_exists t1'.
     + apply is_value__value in H5.
       apply is_value__value in H6.
-      assert ( is_value v1 && is_value vl = true) by (
-      rewrite H5;
-      rewrite H6;
-      auto).
+      assert ( is_value v1 && is_value vl = true) by (rewrite H5; rewrite H6; auto).
       rewrite H7.
       simpl; auto.
   - (* pair *)
@@ -1128,10 +1120,10 @@ Proof.
       * intros t' Hstep.
         inversion Hstep.
         ** solve_values_cannot_be_reduced Hval1 H2.
-        ** apply in_map_iff. exists t2'; split; auto.
+        ** solve_in_map_iff_exists t2'.
     + intros t' Hstep.
       inversion Hstep.
-      * apply in_map_iff; exists t1'; split; auto.
+      * solve_in_map_iff_exists t1'.
       * apply is_value__value in H1. rewrite H1 in Hval1. inversion Hval1.
   - (* fst *)
     intros t' Hstep.
@@ -1149,7 +1141,7 @@ Proof.
       inversion Hstep.
       apply IHt in H0.
       rewrite <- H1 in Hstep.
-      * apply in_map_iff. exists t'0; split; auto.
+      * solve_in_map_iff_exists t'0.
       * rewrite <- H2 in *. rewrite <- H in Hval'.
         assert (value <{ (v1, v2) }>).
         apply v_pair; assumption.
@@ -1163,16 +1155,14 @@ Proof.
       * solve_values_cannot_be_reduced Hval H0.
       * rewrite <- H2 in *.
         destruct (is_value <{ (v1, v2) }>) eqn: Hval12; try (simpl; auto).
-        assert (value <{ (v1, v2) }>).
-        ** apply v_pair; assumption.
-        ** assert (is_value <{ (v1, v2) }> = true).
-           *** apply is_value__value; assumption.
-           *** rewrite H4 in Hval12. inversion Hval12.
+        assert (value <{ (v1, v2) }>) by (apply v_pair; assumption).
+        assert (is_value <{ (v1, v2) }> = true) by (apply is_value__value; assumption).
+        rewrite H4 in Hval12. inversion Hval12.
     + destruct (is_value t) eqn:Hval'; try solve_by_invert.
       inversion Hstep.
       apply IHt in H0.
       rewrite <- H1 in Hstep.
-      * apply in_map_iff. exists t'0; split; auto.
+      * solve_in_map_iff_exists t'0.
       * rewrite <- H2 in *. rewrite <- H in Hval'.
         assert (value <{ (v1, v2) }>) by (apply v_pair; assumption).
         apply is_value__value in H3.
@@ -1188,9 +1178,7 @@ Proof.
         ** apply is_value__value in H3.
            rewrite H3 in Hval1.
            inversion Hval1.
-        ** apply in_map_iff.
-           exists t1'.
-           auto.
+        ** solve_in_map_iff_exists t1'.
   - (* fix *)
     intros t' Hstep.
     destruct (is_value t) eqn:Hval; simpl.
@@ -1200,7 +1188,7 @@ Proof.
       inversion Hstep.
       apply IHt in H0.
       rewrite <- H1 in Hstep.
-      * destruct t; try solve_by_invert; try ( apply in_map_iff; exists t1'; split; auto).
+      * destruct t; try solve_by_invert; solve_in_map_iff_exists t1'.
       * simpl. auto.
   - (* non determinism *)
     intros t' Hstep.
