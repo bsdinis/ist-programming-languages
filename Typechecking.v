@@ -574,11 +574,91 @@ Fixpoint stepf (t : tm) : list tm :=
   | <{t1 !! t2}> => t1 :: [t2]
   end.
 
+(* tactics to solve matching problem when both t1 and t2 are values *)
+Ltac solve_app_val12 t1 t2 Hstep Hval1 Hval2 :=
+  destruct (is_value t1) eqn:Hval1' in Hstep; try (rewrite Hval1 in Hval1'; inversion Hval1');
+  destruct (is_value t2) eqn:Hval2' in Hstep; try (rewrite Hval2 in Hval2'; inversion Hval2');
+  inversion Hstep.
+Ltac solve_app_val12_pair t1 t2 Hstep Hval1 Hval2 :=
+  destruct (is_value t1) eqn:Hval1' in Hstep; try (rewrite Hval1 in Hval1'; inversion Hval1');
+  destruct (is_value <{ t1 t2 }>) eqn:Hval12 in Hstep; try (rewrite Hval1 in Hval12; inversion Hval12);
+  destruct (is_value t2) eqn:Hval2' in Hstep; try (rewrite Hval2 in Hval2'; inversion Hval2');
+  inversion Hstep.
+
+(* tactics to solve matching problem when t1 is a value but t2 is not *)
+Ltac solve_app_val1_nval2 t2 Hstep Hval1 Hval2 IHt2:=
+  destruct (is_value t2) eqn:Hval2' in Hstep;
+  try (rewrite Hval2 in Hval2'; inversion Hval2');
+  apply in_map_iff in Hstep;
+  destruct Hstep as [x Hstep];
+  destruct Hstep as [Ht' Hx];
+  rewrite <- Ht';
+  apply IHt2 in Hx;
+  apply is_value__value in Hval1;
+  eauto.
+
+Ltac solve_app_val1_nval2_pair t1 t2 Hstep Hval1 Hval2 IHt1 IHt2:=
+        destruct (is_value t2) eqn:Hval2' in Hstep; try (rewrite Hval2 in Hval2'; inversion Hval2');
+           destruct (is_value t1 ) eqn:Hval3 in Hstep; try (rewrite Hval2 in Hval3; inversion Hval3);
+           apply in_map_iff in Hstep;
+           destruct Hstep as [x Hstep];
+           destruct Hstep as [Ht' Hx];
+           rewrite <- Ht';
+           try ( apply IHt2 in Hx; apply is_value__value in Hval1; eauto); try ( apply IHt1 in Hx; apply is_value__value in Hval1; eauto).
+
+(* tactics to solve matching problem when t1 is not a value *)
+Ltac solve_app_nval1 t1 Hstep Hval1 IHt1 :=
+   destruct (is_value t1 ) eqn:Hval1' in Hstep;
+        rewrite Hval1 in Hval1'; inversion Hval1';
+        apply in_map_iff in Hstep;
+        destruct Hstep as [x Hstep];
+        destruct Hstep as [Ht' Hx];
+        rewrite <- Ht';
+        apply IHt1 in Hx;
+        eauto.
+
+Ltac solve_mul_nval t Hstep IHt :=
+  destruct (is_value t ) ; try inversion Hstep;
+  apply in_map_iff in Hstep;
+  destruct Hstep as [x Hstep];
+  destruct Hstep as [Ht' Hx];
+  try apply IHt in Hx;
+  rewrite <- Ht';
+  eauto.
+
+Ltac solve_mul_nval_pair t1 t2 Hstep IHt :=
+  destruct (is_value t2); try inversion Hstep;
+  destruct (is_value t1 ) eqn:Hval1'; try inversion Hstep;
+  apply in_map_iff in Hstep;
+  destruct Hstep as [x Hstep];
+  destruct Hstep as [Ht' Hx];
+  try apply IHt in Hx;
+  rewrite <- Ht';
+  eauto;
+  apply is_value__value in Hval1';
+  eauto.
+
+Ltac solve_simple t IHt :=
+  intros t' Hstep;
+  simpl in Hstep;
+  destruct (t) ; try solve_by_invert; try (
+    apply in_map_iff in Hstep;
+    destruct Hstep as [x Hstep];
+    destruct Hstep as [Ht' Hx];
+    apply IHt in Hx;
+    rewrite <- Ht';
+    eauto);
+  apply in_inv in Hstep;
+  destruct Hstep as [H | H];
+  try solve_by_invert;
+  rewrite <- H;
+  eauto.
+
 Theorem sound_stepf : forall t t',
   In t' (stepf t)  ->  t --> t'.
 Proof.
   intros t.
-  induction t; try (intros t' Hstep; solve_by_invert).
+  induction t; try (intros t' Hstep; solve_by_invert); try solve_simple t IHt.
   - (* Application *)
     intros t' Hstep.
     destruct (is_value t1) eqn:Hval1.
@@ -589,252 +669,217 @@ Proof.
         ** destruct (is_value t2) eqn:Hval2' in Hstep; try (rewrite Hval2' in Hval2; inversion Hval2).
            apply in_inv in Hstep. destruct Hstep; try solve_by_invert.
            rewrite <- H. apply ST_AppAbs. apply is_value__value. assumption.
-        ** destruct (is_value n) eqn:Hvaln in Hstep; try (rewrite Hval1 in Hvaln; inversion Hvaln).
-           destruct (is_value t2) eqn:Hval2' in Hstep; try (rewrite Hval2 in Hval2'; inversion Hval2').
-           inversion Hstep.
-        ** destruct (is_value <{ inl t t1 }>) eqn:Hvaln in Hstep; try (rewrite Hval1 in Hvaln; inversion Hvaln).
-           destruct (is_value t2) eqn:Hval2' in Hstep; try (rewrite Hval2 in Hval2'; inversion Hval2').
-           inversion Hstep.
-        ** destruct (is_value <{ inr t t1 }>) eqn:Hvaln in Hstep; try (rewrite Hval1 in Hvaln; inversion Hvaln).
-           destruct (is_value t2) eqn:Hval2' in Hstep; try (rewrite Hval2 in Hval2'; inversion Hval2').
-           inversion Hstep.
-        ** destruct (is_value <{ nil t }>) eqn:Hvaln in Hstep; try (rewrite Hval1 in Hvaln; inversion Hvaln).
-           destruct (is_value t2) eqn:Hval2' in Hstep; try (rewrite Hval2 in Hval2'; inversion Hval2').
-           inversion Hstep.
-        ** destruct (is_value <{ (t1_1 :: t1_2) }>) eqn:Hvaln1 in Hstep; try (rewrite Hval1 in Hvaln1; inversion Hvaln1).
-           destruct (is_value <{ (t1_1 :: t1_2) t2  }>) eqn:Hvaln in Hstep; try (rewrite Hval1 in Hvaln; inversion Hvaln);
-           destruct (is_value t2) eqn:Hval2' in Hstep; try (rewrite Hval2 in Hval2'; inversion Hval2');
-           inversion Hstep.
-        ** destruct (is_value <{ unit }>) eqn:Hvaln in Hstep; try (rewrite Hval1 in Hvaln; inversion Hvaln).
-           destruct (is_value t2) eqn:Hval2' in Hstep; try (rewrite Hval2 in Hval2'; inversion Hval2').
-           inversion Hstep.
-        ** destruct (is_value <{ (t1_1 , t1_2) }>) eqn:Hvaln1 in Hstep; try (rewrite Hval1 in Hvaln1; inversion Hvaln1).
-           destruct (is_value <{ (t1_1 , t1_2) t2  }>) eqn:Hvaln in Hstep; try (rewrite Hval1 in Hvaln; inversion Hvaln);
-           destruct (is_value t2) eqn:Hval2' in Hstep; try (rewrite Hval2 in Hval2'; inversion Hval2');
-           inversion Hstep.
+        ** solve_app_val12 n t2 Hstep Hval1 Hval2.
+        ** solve_app_val12 <{ inl t t1 }> t2 Hstep Hval1 Hval2.
+        ** solve_app_val12 <{ inr t t1 }> t2 Hstep Hval1 Hval2.
+        ** solve_app_val12 <{ nil t }> t2 Hstep Hval1 Hval2.
+        ** solve_app_val12_pair <{ t1_1 :: t1_2 }> t2 Hstep Hval1 Hval2.
+        ** solve_app_val12 <{ unit }> t2 Hstep Hval1 Hval2.
+        ** solve_app_val12_pair <{ (t1_1, t1_2) }> t2 Hstep Hval1 Hval2.
       * (* t2 is not a value, but t1 is *)
         simpl stepf in Hstep.
-        destruct t1; try solve_by_invert;
-        try (
-            destruct (is_value t2) eqn:Hval2' in Hstep;
-            try (rewrite Hval2 in Hval2'; inversion Hval2');
-            apply in_map_iff in Hstep;
-            destruct Hstep as [x Hstep];
-            destruct Hstep as [Ht' Hx];
-            rewrite <- Ht';
-            apply IHt2 in Hx;
-            apply is_value__value in Hval1;
-            apply ST_App2; assumption ).
-        ** destruct (is_value t2) eqn:Hval2' in Hstep; try (rewrite Hval2 in Hval2'; inversion Hval2');
-           destruct (is_value <{ inl t t1 }> ) eqn:Hval3 in Hstep; try (rewrite Hval2 in Hval3; inversion Hval3);
-           apply in_map_iff in Hstep;
-           destruct Hstep as [x Hstep];
-           destruct Hstep as [Ht' Hx];
-           rewrite <- Ht'.
-           *** apply IHt2 in Hx.
-               apply is_value__value in Hval1.
-               apply ST_App2; assumption.
-           *** apply IHt1 in Hx.
-               apply is_value__value in Hval1.
-               apply ST_App1; assumption.
-        ** destruct (is_value t2) eqn:Hval2' in Hstep; try (rewrite Hval2 in Hval2'; inversion Hval2');
-           destruct (is_value <{ inr t t1 }> ) eqn:Hval3 in Hstep; try (rewrite Hval2 in Hval3; inversion Hval3);
-           apply in_map_iff in Hstep;
-           destruct Hstep as [x Hstep];
-           destruct Hstep as [Ht' Hx];
-           rewrite <- Ht'.
-           *** apply IHt2 in Hx.
-               apply is_value__value in Hval1.
-               apply ST_App2; assumption.
-           *** apply IHt1 in Hx.
-               apply is_value__value in Hval1.
-               apply ST_App1; assumption.
-        ** destruct (is_value t2) eqn:Hval2' in Hstep; try (rewrite Hval2 in Hval2'; inversion Hval2');
-           destruct (is_value <{ t1_1 :: t1_2 }> ) eqn:Hval3 in Hstep; try (rewrite Hval2 in Hval3; inversion Hval3);
-           apply in_map_iff in Hstep;
-           destruct Hstep as [x Hstep];
-           destruct Hstep as [Ht' Hx];
-           rewrite <- Ht'.
-           *** apply IHt2 in Hx.
-               apply is_value__value in Hval1.
-               apply ST_App2; assumption.
-           *** apply IHt1 in Hx.
-               apply is_value__value in Hval1.
-               apply ST_App1; assumption.
-        ** destruct (is_value t2) eqn:Hval2' in Hstep; try (rewrite Hval2 in Hval2'; inversion Hval2');
-           destruct (is_value <{ (t1_1, t1_2) }> ) eqn:Hval3 in Hstep; try (rewrite Hval2 in Hval3; inversion Hval3);
-           apply in_map_iff in Hstep;
-           destruct Hstep as [x Hstep];
-           destruct Hstep as [Ht' Hx];
-           rewrite <- Ht'.
-           *** apply IHt2 in Hx.
-               apply is_value__value in Hval1.
-               apply ST_App2; assumption.
-           *** apply IHt1 in Hx.
-               apply is_value__value in Hval1.
-               apply ST_App1; assumption.
+        destruct t1; try solve_by_invert; try solve_app_val1_nval2 t2 Hstep Hval1 Hval2 IHt2.
+        ** solve_app_val1_nval2_pair <{ inl t t1 }> t2 Hstep Hval1 Hval2 IHt1 IHt2.
+        ** solve_app_val1_nval2_pair <{ inr t t1 }> t2 Hstep Hval1 Hval2 IHt1 IHt2.
+        ** solve_app_val1_nval2_pair <{ t1_1 :: t1_2 }> t2 Hstep Hval1 Hval2 IHt1 IHt2.
+        ** solve_app_val1_nval2_pair <{ (t1_1, t1_2) }> t2 Hstep Hval1 Hval2 IHt1 IHt2.
     + (* t1 is not a value *)
         simpl stepf in Hstep.
         destruct t1; try solve_by_invert.
-      * destruct (is_value <{ t1_1 t1_2 }>) eqn:Hval1' in Hstep;
-        rewrite Hval1 in Hval1'; inversion Hval1';
-        apply in_map_iff in Hstep;
-        destruct Hstep as [x Hstep];
-        destruct Hstep as [Ht' Hx];
-        rewrite <- Ht';
-        apply IHt1 in Hx;
-        apply ST_App1; assumption.
-      * destruct (is_value <{ succ t1 }>) eqn:Hval1' in Hstep;
-        rewrite Hval1 in Hval1'; inversion Hval1';
-        apply in_map_iff in Hstep;
-        destruct Hstep as [x Hstep];
-        destruct Hstep as [Ht' Hx];
-        rewrite <- Ht';
-        apply IHt1 in Hx;
-        apply ST_App1; assumption.
-      * destruct (is_value <{ pred t1 }>) eqn:Hval1' in Hstep;
-        rewrite Hval1 in Hval1'; inversion Hval1';
-        apply in_map_iff in Hstep;
-        destruct Hstep as [x Hstep];
-        destruct Hstep as [Ht' Hx];
-        rewrite <- Ht';
-        apply IHt1 in Hx;
-        apply ST_App1; assumption.
-      * destruct (is_value <{ t1_1 * t1_2 }>) eqn:Hval1' in Hstep;
-        rewrite Hval1 in Hval1'; inversion Hval1';
-        apply in_map_iff in Hstep;
-        destruct Hstep as [x Hstep];
-        destruct Hstep as [Ht' Hx];
-        rewrite <- Ht';
-        apply IHt1 in Hx;
-        apply ST_App1; assumption.
-      * destruct (is_value <{ if0 t1_1 then t1_2 else t1_3 }>) eqn:Hval1' in Hstep;
-        rewrite Hval1 in Hval1'; inversion Hval1';
-        apply in_map_iff in Hstep;
-        destruct Hstep as [x Hstep];
-        destruct Hstep as [Ht' Hx];
-        rewrite <- Ht';
-        apply IHt1 in Hx;
-        apply ST_App1; assumption.
-      * destruct (is_value <{ inl t t1 }>) eqn:Hval1' in Hstep;
-        rewrite Hval1 in Hval1'; inversion Hval1';
-        apply in_map_iff in Hstep;
-        destruct Hstep as [x Hstep];
-        destruct Hstep as [Ht' Hx];
-        rewrite <- Ht';
-        apply IHt1 in Hx;
-        apply ST_App1; assumption.
-      * destruct (is_value <{ inr t t1 }>) eqn:Hval1' in Hstep;
-        rewrite Hval1 in Hval1'; inversion Hval1';
-        apply in_map_iff in Hstep;
-        destruct Hstep as [x Hstep];
-        destruct Hstep as [Ht' Hx];
-        rewrite <- Ht';
-        apply IHt1 in Hx;
-        apply ST_App1; assumption.
-      * destruct (is_value <{ case t1_1 of | inl s => t1_2 | inr s0 => t1_3 }>) eqn:Hval1' in Hstep;
-        rewrite Hval1 in Hval1'; inversion Hval1';
-        apply in_map_iff in Hstep;
-        destruct Hstep as [x Hstep];
-        destruct Hstep as [Ht' Hx];
-        rewrite <- Ht';
-        apply IHt1 in Hx;
-        apply ST_App1; assumption.
-      * destruct (is_value <{ t1_1 :: t1_2 }>) eqn:Hval1' in Hstep;
-        rewrite Hval1 in Hval1'; inversion Hval1';
-        apply in_map_iff in Hstep;
-        destruct Hstep as [x Hstep];
-        destruct Hstep as [Ht' Hx];
-        rewrite <- Ht';
-        apply IHt1 in Hx;
-        apply ST_App1; assumption.
-      * destruct (is_value <{ case t1_1 of | nil => t1_2 | s :: s0 => t1_3 }>) eqn:Hval1' in Hstep;
-        rewrite Hval1 in Hval1'; inversion Hval1';
-        apply in_map_iff in Hstep;
-        destruct Hstep as [x Hstep];
-        destruct Hstep as [Ht' Hx];
-        rewrite <- Ht';
-        apply IHt1 in Hx;
-        apply ST_App1; assumption.
-      * destruct (is_value <{ (t1_1, t1_2) }>) eqn:Hval1' in Hstep;
-        rewrite Hval1 in Hval1'; inversion Hval1';
-        apply in_map_iff in Hstep;
-        destruct Hstep as [x Hstep];
-        destruct Hstep as [Ht' Hx];
-        rewrite <- Ht';
-        apply IHt1 in Hx;
-        apply ST_App1; assumption.
-      * destruct (is_value <{ t1.fst }>) eqn:Hval1' in Hstep;
-        rewrite Hval1 in Hval1'; inversion Hval1';
-        apply in_map_iff in Hstep;
-        destruct Hstep as [x Hstep];
-        destruct Hstep as [Ht' Hx];
-        rewrite <- Ht';
-        apply IHt1 in Hx;
-        apply ST_App1; assumption.
-      * destruct (is_value <{ t1.snd }>) eqn:Hval1' in Hstep;
-        rewrite Hval1 in Hval1'; inversion Hval1';
-        apply in_map_iff in Hstep;
-        destruct Hstep as [x Hstep];
-        destruct Hstep as [Ht' Hx];
-        rewrite <- Ht';
-        apply IHt1 in Hx;
-        apply ST_App1; assumption.
-      * destruct (is_value <{ let s = t1_1 in t1_2 }>) eqn:Hval1' in Hstep;
-        rewrite Hval1 in Hval1'; inversion Hval1';
-        apply in_map_iff in Hstep;
-        destruct Hstep as [x Hstep];
-        destruct Hstep as [Ht' Hx];
-        rewrite <- Ht';
-        apply IHt1 in Hx;
-        apply ST_App1; assumption.
-      * destruct (is_value <{ fix t1 }>) eqn:Hval1' in Hstep;
-        rewrite Hval1 in Hval1'; inversion Hval1';
-        apply in_map_iff in Hstep;
-        destruct Hstep as [x Hstep];
-        destruct Hstep as [Ht' Hx];
-        rewrite <- Ht';
-        apply IHt1 in Hx;
-        apply ST_App1; assumption.
-      * destruct (is_value <{ t1_1 !! t1_2 }>) eqn:Hval1' in Hstep;
-        rewrite Hval1 in Hval1'; inversion Hval1';
-        apply in_map_iff in Hstep;
-        destruct Hstep as [x Hstep];
-        destruct Hstep as [Ht' Hx];
-        rewrite <- Ht';
-        apply IHt1 in Hx;
-        apply ST_App1; assumption.
-  - (* succ *)
-    admit.
-  - (* pred *)
-    admit.
+      * solve_app_nval1 <{ t1_1 t1_2 }> Hstep Hval1 IHt1.
+      * solve_app_nval1 <{ succ t1 }> Hstep Hval1 IHt1.
+      * solve_app_nval1 <{ pred t1 }> Hstep Hval1 IHt1.
+      * solve_app_nval1 <{ t1_1 * t1_2 }> Hstep Hval1 IHt1.
+      * solve_app_nval1 <{ if0 t1_1 then t1_2 else t1_3 }> Hstep Hval1 IHt1.
+      * solve_app_nval1 <{ inl t t1 }> Hstep Hval1 IHt1.
+      * solve_app_nval1 <{ inr t t1 }> Hstep Hval1 IHt1.
+      * solve_app_nval1 <{ case t1_1 of | inl s => t1_2 | inr s0 => t1_3 }> Hstep Hval1 IHt1.
+      * solve_app_nval1 <{ t1_1 :: t1_2 }> Hstep Hval1 IHt1.
+      * solve_app_nval1 <{ case t1_1 of | nil => t1_2 | s :: s0 => t1_3 }> Hstep Hval1 IHt1.
+      * solve_app_nval1 <{ (t1_1, t1_2) }> Hstep Hval1 IHt1.
+      * solve_app_nval1 <{ t1.fst }> Hstep Hval1 IHt1.
+      * solve_app_nval1 <{ t1.snd }> Hstep Hval1 IHt1.
+      * solve_app_nval1 <{ let s = t1_1 in t1_2 }> Hstep Hval1 IHt1.
+      * solve_app_nval1 <{ fix t1 }> Hstep Hval1 IHt1.
+      * solve_app_nval1 <{ t1_1 !! t1_2 }> Hstep Hval1 IHt1.
   - (* mult *)
-    admit.
+    intros t' Hstep.
+    simpl in Hstep.
+    destruct (t1); try solve_by_invert; try solve_mul_nval t2 Hstep IHt1.
+    + destruct (t2); try solve_by_invert.
+      * solve_mul_nval <{ t3 t4 }> Hstep IHt2.
+      * apply in_inv in Hstep;
+        destruct Hstep;
+        try solve_by_invert;
+        rewrite <- H;
+        eauto.
+      * solve_mul_nval <{ succ t }> Hstep IHt2.
+      * solve_mul_nval <{ pred t }> Hstep IHt2.
+      * solve_mul_nval <{ t3 * t4 }> Hstep IHt2.
+      * solve_mul_nval <{ if0 t3 then t4 else t5 }> Hstep IHt2.
+      * solve_mul_nval <{ inl t t0 }> Hstep IHt2.
+      * solve_mul_nval <{ inr t t0 }> Hstep IHt2.
+      * solve_mul_nval <{ case t3 of | inl s => t4 | inr s0 => t5 }> Hstep IHt2.
+      * solve_mul_nval <{ t3 :: t4 }> Hstep IHt2.
+      * solve_mul_nval <{ case t3 of | nil => t4 | s :: s0 => t5 }> Hstep IHt2.
+      * solve_mul_nval <{ (t3, t4) }> Hstep IHt2.
+      * solve_mul_nval <{ t.fst }> Hstep IHt2.
+      * solve_mul_nval <{ t.snd }> Hstep IHt2.
+      * solve_mul_nval <{ let s = t3 in t4 }> Hstep IHt2.
+      * solve_mul_nval <{ fix t }> Hstep IHt2.
+      * solve_mul_nval <{ t3 !! t4 }> Hstep IHt2.
+    + solve_mul_nval_pair <{ inl t t0 }> t2 Hstep IHt2.
+    + solve_mul_nval_pair <{ inr t t0 }> t2 Hstep IHt2.
+    + solve_mul_nval_pair <{ t3 :: t4 }> t2 Hstep IHt2.
+    + solve_mul_nval_pair <{ (t3, t4) }> t2 Hstep IHt2.
   - (* if0 *)
-    admit.
-  - (* inl *)
-    admit.
-  - (* inr *)
-    admit.
+    intros t' Hstep.
+    simpl in Hstep.
+    destruct (is_value t1).
+    destruct t1; try solve_by_invert.
+    + destruct n; apply in_inv in Hstep; destruct Hstep; try inversion H; eauto.
+    + apply in_map_iff in Hstep;
+      destruct Hstep as [x Hstep];
+      destruct Hstep as [Ht' Hx];
+      apply IHt1 in Hx;
+      rewrite <- Ht';
+      eauto.
   - (* case *)
-    admit.
+    intros t' Hstep.
+    simpl in Hstep.
+    destruct t1; try solve_by_invert; try (
+      apply in_map_iff in Hstep;
+      destruct Hstep as [x Hstep];
+      destruct Hstep as [Ht' Hx];
+      apply IHt1 in Hx;
+      rewrite <- Ht';
+      eauto); try (
+      destruct (is_value t1) eqn:Hval1; try (
+       apply in_inv in Hstep; destruct Hstep; try inversion H; apply is_value__value in Hval1; eauto); try (
+        apply in_map_iff in Hstep;
+        destruct Hstep as [x Hstep];
+        destruct Hstep as [Ht' Hx];
+        apply IHt1 in Hx;
+        rewrite <- Ht';
+        eauto)).
   - (* cons *)
-    admit.
+    intros t' Hstep.
+    simpl in Hstep.
+    destruct (is_value t1) eqn:Hval1.
+    + destruct (is_value t2) eqn:Hval2. try inversion Hstep.
+      apply in_map_iff in Hstep;
+      destruct Hstep as [x Hstep];
+      destruct Hstep as [Ht' Hx];
+      apply IHt2 in Hx;
+      rewrite <- Ht';
+      apply is_value__value in Hval1.
+      eauto.
+    + apply in_map_iff in Hstep;
+      destruct Hstep as [x Hstep];
+      destruct Hstep as [Ht' Hx];
+      apply IHt1 in Hx;
+      rewrite <- Ht';
+      eauto.
   - (* lcase *)
-    admit.
+    intros t' Hstep.
+    simpl in Hstep.
+    destruct t1; try solve_by_invert; try (
+      apply in_map_iff in Hstep;
+      destruct Hstep as [x Hstep];
+      destruct Hstep as [Ht' Hx];
+      apply IHt1 in Hx;
+      rewrite <- Ht';
+      eauto).
+    + apply in_inv in Hstep; destruct Hstep; try inversion H; eauto.
+    + destruct (is_value t1_1 && is_value t1_2) eqn:Hval12.
+      * apply andb_true_iff in Hval12.
+        destruct Hval12 as [Hval1 Hval2].
+        apply is_value__value in Hval1.
+        apply is_value__value in Hval2.
+        apply in_inv in Hstep; destruct Hstep; try inversion H; eauto.
+      * apply in_map_iff in Hstep;
+        destruct Hstep as [x Hstep];
+        destruct Hstep as [Ht' Hx];
+        apply IHt1 in Hx;
+        rewrite <- Ht';
+        eauto.
   - (* pair *)
-    admit.
+    intros t' Hstep.
+    simpl in Hstep.
+    destruct (is_value t1) eqn:Hval1.
+    + destruct (is_value t2) eqn:Hval2. try inversion Hstep.
+      apply in_map_iff in Hstep;
+      destruct Hstep as [x Hstep];
+      destruct Hstep as [Ht' Hx];
+      apply IHt2 in Hx;
+      rewrite <- Ht';
+      apply is_value__value in Hval1.
+      eauto.
+    + apply in_map_iff in Hstep;
+      destruct Hstep as [x Hstep];
+      destruct Hstep as [Ht' Hx];
+      apply IHt1 in Hx;
+      rewrite <- Ht';
+      eauto.
   - (* fst *)
-    admit.
+    intros t' Hstep.
+    simpl in Hstep.
+    destruct (is_value t) eqn:Hval.
+    + destruct t; try solve_by_invert.
+      apply in_inv in Hstep; destruct Hstep; try inversion H.
+      rewrite H in Hval.
+      inversion Hval.
+      apply andb_true_iff in H2; destruct H2 as [Ht1 Ht2].
+      apply is_value__value in Ht1.
+      apply is_value__value in Ht2.
+      eauto.
+    + apply in_map_iff in Hstep;
+      destruct Hstep as [x Hstep];
+      destruct Hstep as [Ht' Hx];
+      apply IHt in Hx;
+      rewrite <- Ht';
+      eauto.
   - (* snd *)
-    admit.
+    intros t' Hstep.
+    simpl in Hstep.
+    destruct (is_value t) eqn:Hval.
+    + destruct t; try solve_by_invert.
+      apply in_inv in Hstep.
+      destruct Hstep; try inversion H.
+      rewrite H in Hval.
+      inversion Hval.
+      apply andb_true_iff in H2; destruct H2 as [Ht1 Ht2].
+      apply is_value__value in Ht1.
+      apply is_value__value in Ht2.
+      eauto.
+    + apply in_map_iff in Hstep;
+      destruct Hstep as [x Hstep];
+      destruct Hstep as [Ht' Hx];
+      apply IHt in Hx;
+      rewrite <- Ht';
+      eauto.
   - (* let *)
-    admit.
-  - (* fix *)
-    admit.
+    intros t' Hstep.
+    simpl in Hstep.
+    destruct (is_value t1) eqn:Hval1.
+    + apply in_inv in Hstep;
+      destruct Hstep; try inversion H;
+      apply is_value__value in Hval1;
+      eauto.
+    + apply in_map_iff in Hstep;
+      destruct Hstep as [x Hstep];
+      destruct Hstep as [Ht' Hx];
+      apply IHt1 in Hx;
+      rewrite <- Ht';
+      eauto.
   - (* non determinism *)
-    admit.
-Admitted.
+    intros t' Hstep.
+    simpl in Hstep.
+    destruct Hstep as [H1 | H2 ].
+    + rewrite H1. eauto.
+    + destruct H2 as [H2 | HFalse]; try contradiction.
+      rewrite H2. eauto.
+Qed.
 
 (* TODO *)
 (* Completeness of [stepf]. *)
