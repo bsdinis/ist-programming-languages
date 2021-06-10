@@ -434,25 +434,36 @@ Fixpoint is_value (t: tm) : bool :=
   end.
 
 Lemma is_value__value: forall t,
-  is_value t = true -> value t.
+  is_value t = true <-> value t.
 Proof.
   intro t.
-  intro H.
-  induction t; try solve_by_invert.
-  - apply v_abs.
-  - apply v_nat.
-  - apply v_inl. inversion H. auto.
-  - apply v_inr. inversion H. auto.
-  - apply v_lnil.
-  - apply v_lcons; inversion H; apply andb_true_iff in H1; destruct H1 as [H1 H2]; auto.
-  - apply v_unit.
-  - apply v_pair; inversion H; apply andb_true_iff in H1; destruct H1 as [H1 H2]; auto.
+  split.
+  - (* -> *)
+    intro H.
+    induction t; try solve_by_invert.
+    + apply v_abs.
+    + apply v_nat.
+    + apply v_inl. inversion H. auto.
+    + apply v_inr. inversion H. auto.
+    + apply v_lnil.
+    + apply v_lcons; inversion H; apply andb_true_iff in H1; destruct H1 as [H1 H2]; auto.
+    + apply v_unit.
+    + apply v_pair; inversion H; apply andb_true_iff in H1; destruct H1 as [H1 H2]; auto.
+  - (* -> *)
+    intro H.
+    induction t; try solve_by_invert; try simpl; try reflexivity.
+    + inversion H. apply IHt in H1. assumption.
+    + inversion H. apply IHt in H1. assumption.
+    + apply andb_true_iff.
+      split.
+      * inversion H; apply IHt1 in H2; assumption.
+      * inversion H; apply IHt2 in H3; assumption.
+    + apply andb_true_iff.
+      split.
+      * inversion H; apply IHt1 in H2; assumption.
+      * inversion H; apply IHt2 in H3; assumption.
 Qed.
 
-Lemma value__is_value: forall t,
-  value t -> is_value t = true.
-Proof.
-Admitted.
 
 (* Operational semantics as a Coq function. *)
 Fixpoint stepf (t : tm) : list tm :=
@@ -818,29 +829,155 @@ Proof.
       rewrite H2. eauto.
 Qed.
 
-(* TODO *)
+Lemma values_cannot_be_reduced: forall t t',
+  t --> t' -> value t -> False.
+Proof.
+  intros t t' Hstep.
+  induction t.
+
+Admitted.
+(*
+  - (* string *)
+    eexists; intros Hstep; inversion Hstep.
+  - (* application *)
+    eexists; intros Hstep; inversion Hstep.
+
+    exists.
+
+Admitted.
+ *)
+
 (* Completeness of [stepf]. *)
 Theorem complete_stepf : forall t t',
     t --> t'  ->  In t' (stepf t).
-Proof. 
+Proof.
   intros t.
-  induction t; intros t' Hstep; simpl; try solve_by_invert.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
+  induction t; try (intros t' Hstep; solve_by_invert).
+  - (* application *)
+    admit.
+  - (* succ *)
+    admit.
+  - (* pred *)
+    admit.
+  - (* mult *)
+    admit.
+  - (* if0 *)
+    admit.
+  - (* inl *)
+    admit.
+  - (* inr *)
+    admit.
+  - (* case *)
+    admit.
+  - (* cons *)
+    admit.
+  - (* lcase *)
+    admit.
+  - (* pair *)
+    simpl.
+    destruct (is_value t1) eqn:Hval1.
+    + destruct (is_value t2) eqn:Hval2.
+      * simpl. intros t' Hstep.
+        inversion Hstep.
+        ** apply is_value__value in Hval1.
+           apply values_cannot_be_reduced in H2.
+           contradiction.
+           assumption.
+        ** apply is_value__value in Hval2.
+           apply values_cannot_be_reduced in H3.
+           contradiction.
+           assumption.
+      * intros t' Hstep.
+        apply in_map_iff.
+        eexists.
+        split.
+        ** inversion Hstep.
+           apply is_value__value in Hval1.
+           apply values_cannot_be_reduced in H2.
+           *** contradiction.
+           *** assumption.
+           *** admit.
+        ** inversion Hstep.
+           *** apply is_value__value in Hval1.
+               apply values_cannot_be_reduced in  H2.
+               contradiction.
+               assumption.
+           *** admit.
+    + intros t' Hstep.
+      apply in_map_iff.
+      eexists; split.
+      * admit.
+      * admit.
+  - (* fst *)
+    intros t' Hstep.
+    destruct (is_value t) eqn:Hval; simpl.
+    + inversion Hstep.
+      * apply is_value__value in Hval.
+        apply values_cannot_be_reduced in H0.
+        contradiction. assumption.
+      * rewrite <- H2 in *.
+        destruct (is_value <{ (v1, v2) }>) eqn: Hval12; try (simpl; auto).
+        assert (value <{ (v1, v2) }>).
+        ** apply v_pair; assumption.
+        ** assert (is_value <{ (v1, v2) }> = true).
+           *** apply is_value__value; assumption.
+           *** rewrite H4 in Hval12. inversion Hval12.
+    + destruct (is_value t) eqn:Hval'; try solve_by_invert.
+      inversion Hstep.
+      apply IHt in H0.
+      rewrite <- H1 in Hstep.
+      * apply in_map_iff. exists t'0; split; auto.
+      * rewrite <- H2 in *. rewrite <- H in Hval'.
+        assert (value <{ (v1, v2) }>).
+        apply v_pair; assumption.
+        apply is_value__value in H3.
+        rewrite H3 in Hval'.
+        inversion Hval'.
+  - (* snd *)
+    intros t' Hstep.
+    destruct (is_value t) eqn:Hval; simpl.
+    + inversion Hstep.
+      * apply is_value__value in Hval.
+        apply values_cannot_be_reduced in H0.
+        contradiction. assumption.
+      * rewrite <- H2 in *.
+        destruct (is_value <{ (v1, v2) }>) eqn: Hval12; try (simpl; auto).
+        assert (value <{ (v1, v2) }>).
+        ** apply v_pair; assumption.
+        ** assert (is_value <{ (v1, v2) }> = true).
+           *** apply is_value__value; assumption.
+           *** rewrite H4 in Hval12. inversion Hval12.
+    + destruct (is_value t) eqn:Hval'; try solve_by_invert.
+      inversion Hstep.
+      apply IHt in H0.
+      rewrite <- H1 in Hstep.
+      * apply in_map_iff. exists t'0; split; auto.
+      * rewrite <- H2 in *. rewrite <- H in Hval'.
+        assert (value <{ (v1, v2) }>).
+        apply v_pair; assumption.
+        apply is_value__value in H3.
+        rewrite H3 in Hval'.
+        inversion Hval'.
+  - (* let *)
+    admit.
+  - (* fix *)
+    intros t' Hstep.
+    destruct (is_value t) eqn:Hval; simpl.
+    + inversion Hstep.
+      * apply is_value__value in Hval.
+        apply values_cannot_be_reduced in H0.
+        contradiction. assumption.
+      * rewrite <- H0 in *.
+        destruct (is_value t) eqn: Hval12; try (simpl; auto).
+    + destruct (is_value t) eqn:Hval'; try solve_by_invert.
+      inversion Hstep.
+      apply IHt in H0.
+      rewrite <- H1 in Hstep.
+      * destruct t; try solve_by_invert; try ( apply in_map_iff; exists t1'; split; auto).
+      * simpl. auto.
+  - (* non determinism *)
+    intros t' Hstep.
+    inversion Hstep; simpl; auto.
 Admitted.
 
 
