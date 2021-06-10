@@ -822,12 +822,32 @@ Qed.
 (* Completeness of [stepf]. *)
 Theorem complete_stepf : forall t t',
     t --> t'  ->  In t' (stepf t).
-Proof. (* TODO *) Admitted.
+Proof. 
+  intros t.
+  induction t; intros t' Hstep; simpl; try solve_by_invert.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+Admitted.
 
 
 End StepFunction.
 (** [] *)
 
+(*
 Fixpoint big_stepf (t : tm) : list tm :=
   match t with
   (* pure STLC *)
@@ -972,6 +992,7 @@ Fixpoint big_stepf (t : tm) : list tm :=
   (* non-deterministic choice *)
   | <{t1 !! t2}> => (stepf t1) ++ (stepf t2)
   end.
+*)
 
 (** **** Exercise: 5 stars, standard, optional (stlc_impl)
 
