@@ -832,20 +832,100 @@ Qed.
 Lemma values_cannot_be_reduced: forall t t',
   t --> t' -> value t -> False.
 Proof.
-  intros t t' Hstep.
+  intros t.
   induction t.
-
-Admitted.
-(*
   - (* string *)
-    eexists; intros Hstep; inversion Hstep.
+    intros t' Hstep.
+    inversion Hstep.
   - (* application *)
-    eexists; intros Hstep; inversion Hstep.
-
-    exists.
-
-Admitted.
- *)
+    intros t' Hstep Hval.
+    inversion Hval.
+  - (* abs *)
+    intros t' Hstep.
+    inversion Hstep.
+  - (* const *)
+    intros t' Hstep.
+    inversion Hstep.
+  - (* succ *)
+    intros t' Hstep Hval.
+    inversion Hval.
+  - (* pred *)
+    intros t' Hstep Hval.
+    inversion Hval.
+  - (* mult *)
+    intros t' Hstep Hval.
+    inversion Hval.
+  - (* if0 *)
+    intros t' Hstep Hval.
+    inversion Hval.
+  - (* inl *)
+    intros t' Hstep Hval.
+    inversion Hstep.
+    generalize dependent t'.
+    apply IHt in H2.
+    contradiction.
+    inversion Hval.
+    assumption.
+  - (* inr *)
+    intros t' Hstep Hval.
+    inversion Hstep.
+    generalize dependent t'.
+    apply IHt in H2.
+    contradiction.
+    inversion Hval.
+    assumption.
+  - (* case *)
+    intros t' Hstep Hval.
+    inversion Hval.
+  - (* nil *)
+    intros t' Hstep.
+    inversion Hstep.
+  - (* cons *)
+    intros t' Hstep Hval.
+    inversion Hstep; generalize dependent t'.
+    + apply IHt1 in H2.
+      contradiction.
+      inversion Hval.
+      assumption.
+    + apply IHt2 in H3.
+      contradiction.
+      inversion Hval.
+      assumption.
+  - (* lcase *)
+    intros t' Hstep Hval.
+    inversion Hval.
+  - (* unit *)
+    intros t' Hstep.
+    inversion Hstep.
+  - (* pair *)
+    intros t' Hstep Hval.
+    inversion Hstep.
+    + generalize dependent t'.
+      apply IHt1 in H2.
+      contradiction.
+      inversion Hval.
+      assumption.
+    + generalize dependent t'.
+      apply IHt2 in H3.
+      contradiction.
+      inversion Hval.
+      assumption.
+  - (* fst *)
+    intros t' Hstep Hval.
+    inversion Hval.
+  - (* snd *)
+    intros t' Hstep Hval.
+    inversion Hval.
+  - (* let *)
+    intros t' Hstep Hval.
+    inversion Hval.
+  - (* fix *)
+    intros t' Hstep Hval.
+    inversion Hval.
+  - (* non determinism *)
+    intros t' Hstep Hval.
+    inversion Hval.
+Qed.
 
 (* Completeness of [stepf]. *)
 Theorem complete_stepf : forall t t',
